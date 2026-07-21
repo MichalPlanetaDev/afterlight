@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <expected>
 #include <limits>
 #include <vector>
 
@@ -40,6 +39,29 @@ struct TextureHandle final
     friend bool operator==(const TextureHandle&, const TextureHandle&) = default;
 };
 
+class TextureCreateResult final
+{
+public:
+    [[nodiscard]] static TextureCreateResult success(TextureHandle handle) noexcept;
+
+    [[nodiscard]] static TextureCreateResult failure(ResourceError error) noexcept;
+
+    [[nodiscard]] bool has_value() const noexcept;
+
+    [[nodiscard]] const TextureHandle& operator*() const;
+
+    [[nodiscard]] const TextureHandle* operator->() const;
+
+    [[nodiscard]] ResourceError error() const noexcept;
+
+private:
+    TextureCreateResult(TextureHandle handle, ResourceError error, bool successful) noexcept;
+
+    TextureHandle value_;
+    ResourceError error_{ResourceError::none};
+    bool successful_{};
+};
+
 struct TextureDesc final
 {
     std::uint32_t width{};
@@ -51,8 +73,7 @@ struct TextureDesc final
 class ResourceRegistry final
 {
 public:
-    [[nodiscard]] std::expected<TextureHandle, ResourceError>
-    create_texture(const TextureDesc& descriptor);
+    [[nodiscard]] TextureCreateResult create_texture(const TextureDesc& descriptor);
 
     [[nodiscard]] bool destroy_texture(TextureHandle handle) noexcept;
 

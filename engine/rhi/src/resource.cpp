@@ -1,20 +1,74 @@
 #include <afterlight/rhi/resource.hpp>
-#include <limits>
+#include <stdexcept>
 
 namespace afterlight::rhi
 {
 
-std::expected<TextureHandle, ResourceError>
-ResourceRegistry::create_texture(const TextureDesc& descriptor)
+TextureCreateResult::TextureCreateResult(TextureHandle handle,
+                                         ResourceError error,
+                                         bool successful) noexcept
+    : value_{handle}, error_{error}, successful_{successful}
+{
+}
+
+TextureCreateResult TextureCreateResult::success(TextureHandle handle) noexcept
+{
+    return TextureCreateResult{
+        handle,
+        ResourceError::none,
+        true,
+    };
+}
+
+TextureCreateResult TextureCreateResult::failure(ResourceError error) noexcept
+{
+    return TextureCreateResult{
+        {},
+        error,
+        false,
+    };
+}
+
+bool TextureCreateResult::has_value() const noexcept
+{
+    return successful_;
+}
+
+const TextureHandle& TextureCreateResult::operator*() const
+{
+    if (!successful_)
+    {
+        throw std::logic_error{"texture creation result has no value"};
+    }
+
+    return value_;
+}
+
+const TextureHandle* TextureCreateResult::operator->() const
+{
+    if (!successful_)
+    {
+        throw std::logic_error{"texture creation result has no value"};
+    }
+
+    return &value_;
+}
+
+ResourceError TextureCreateResult::error() const noexcept
+{
+    return error_;
+}
+
+TextureCreateResult ResourceRegistry::create_texture(const TextureDesc& descriptor)
 {
     if (descriptor.width == 0 || descriptor.height == 0)
     {
-        return std::unexpected{ResourceError::invalid_extent};
+        return TextureCreateResult::failure(ResourceError::invalid_extent);
     }
 
     if (descriptor.format == TextureFormat::undefined)
     {
-        return std::unexpected{ResourceError::undefined_format};
+        return TextureCreateResult::failure(ResourceError::undefined_format);
     }
 
     if (!free_texture_indices_.empty())
@@ -30,15 +84,15 @@ ResourceRegistry::create_texture(const TextureDesc& descriptor)
 
         ++live_texture_count_;
 
-        return TextureHandle{
+        return TextureCreateResult::success({
             .index = index,
             .generation = slot.generation,
-        };
+        });
     }
 
     if (texture_slots_.size() >= static_cast<std::size_t>(TextureHandle::invalid_index))
     {
-        return std::unexpected{ResourceError::capacity_exhausted};
+        return TextureCreateResult::failure(ResourceError::capacity_exhausted);
     }
 
     const auto index = static_cast<std::uint32_t>(texture_slots_.size());
@@ -51,10 +105,10 @@ ResourceRegistry::create_texture(const TextureDesc& descriptor)
 
     ++live_texture_count_;
 
-    return TextureHandle{
+    return TextureCreateResult::success({
         .index = index,
         .generation = 1,
-    };
+    });
 }
 
 bool ResourceRegistry::destroy_texture(TextureHandle handle) noexcept
