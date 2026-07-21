@@ -49,3 +49,29 @@ set_tests_properties(
     PROPERTIES
         LABELS "unit;graphics;vulkan;swapchain"
 )
+
+add_executable(
+    afterlight_vulkan_barrier_translation_tests
+    barrier_translation_test.cpp
+)
+
+target_link_libraries(
+    afterlight_vulkan_barrier_translation_tests
+    PRIVATE
+        Afterlight::Vulkan
+)
+
+afterlight_configure_target(
+    afterlight_vulkan_barrier_translation_tests
+)
+
+add_test(
+    NAME afterlight.vulkan.barrier_translation
+    COMMAND afterlight_vulkan_barrier_translation_tests
+)
+
+set_tests_properties(
+    afterlight.vulkan.barrier_translation
+    PROPERTIES
+        LABELS "unit;graphics;vulkan;rhi;synchronization"
+)

@@ -3,6 +3,7 @@ find_package(volk CONFIG REQUIRED)
 add_library(
     afterlight_vulkan
     STATIC
+        src/barrier.cpp
         src/device_selection.cpp
         src/swapchain.cpp
         src/vulkan_context.cpp
@@ -20,6 +21,7 @@ target_link_libraries(
     afterlight_vulkan
     PUBLIC
         Afterlight::Platform
+        Afterlight::Rhi
         volk::volk_headers
     PRIVATE
         volk::volk

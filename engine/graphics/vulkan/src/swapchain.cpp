@@ -1,9 +1,11 @@
+#include <afterlight/graphics/vulkan/barrier.hpp>
 #include <afterlight/graphics/vulkan/swapchain.hpp>
 #include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <span>
 #include <stdexcept>
 #include <string_view>
@@ -93,76 +95,6 @@ query_surface_formats(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
         "vkGetPhysicalDeviceSurfacePresentModesKHR(data)");
 
     return modes;
-}
-
-[[nodiscard]] VkImageMemoryBarrier2 begin_rendering_barrier(VkImage image) noexcept
-{
-    VkImageMemoryBarrier2 barrier{};
-
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-
-    barrier.srcStageMask = VK_PIPELINE_STAGE_2_NONE;
-
-    barrier.srcAccessMask = VK_ACCESS_2_NONE;
-
-    barrier.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-    barrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-
-    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-    barrier.image = image;
-
-    barrier.subresourceRange = {
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .baseMipLevel = 0,
-        .levelCount = 1,
-        .baseArrayLayer = 0,
-        .layerCount = 1,
-    };
-
-    return barrier;
-}
-
-[[nodiscard]] VkImageMemoryBarrier2 present_barrier(VkImage image) noexcept
-{
-    VkImageMemoryBarrier2 barrier{};
-
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-
-    barrier.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-    barrier.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-
-    barrier.dstStageMask = VK_PIPELINE_STAGE_2_NONE;
-
-    barrier.dstAccessMask = VK_ACCESS_2_NONE;
-
-    barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-    barrier.image = image;
-
-    barrier.subresourceRange = {
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .baseMipLevel = 0,
-        .levelCount = 1,
-        .baseArrayLayer = 0,
-        .layerCount = 1,
-    };
-
-    return barrier;
 }
 
 void apply_image_barrier(VkCommandBuffer command_buffer, const VkImageMemoryBarrier2& image_barrier)
@@ -312,12 +244,9 @@ SwapchainRenderer::~SwapchainRenderer()
 
 bool SwapchainRenderer::render_frame(const platform::Window& window)
 {
-    if (resize_requested_)
+    if (resize_requested_ && !recreate_swapchain(window))
     {
-        if (!recreate_swapchain(window))
-        {
-            return false;
-        }
+        return false;
     }
 
     if (swapchain_ == VK_NULL_HANDLE)
@@ -325,7 +254,9 @@ bool SwapchainRenderer::render_frame(const platform::Window& window)
         return recreate_swapchain(window);
     }
 
-    FrameResources& frame = frames_[current_frame_];
+    const std::uint32_t frame_slot = frame_scheduler_.next_slot();
+
+    FrameResources& frame = frames_[static_cast<std::size_t>(frame_slot)];
 
     require_success(vkWaitForFences(context_.device(),
                                     1,
@@ -333,6 +264,11 @@ bool SwapchainRenderer::render_frame(const platform::Window& window)
                                     VK_TRUE,
                                     std::numeric_limits<std::uint64_t>::max()),
                     "vkWaitForFences(frame)");
+
+    if (frame_scheduler_.is_submitted(frame_slot) && !frame_scheduler_.mark_completed(frame_slot))
+    {
+        throw std::runtime_error{"RHI frame slot completion was rejected"};
+    }
 
     std::uint32_t image_index = 0;
 
@@ -355,6 +291,13 @@ bool SwapchainRenderer::render_frame(const platform::Window& window)
         throw vulkan_failure("vkAcquireNextImageKHR", acquire_result);
     }
 
+    const std::optional<rhi::FrameToken> frame_token = frame_scheduler_.begin_frame();
+
+    if (!frame_token.has_value())
+    {
+        throw std::runtime_error{"RHI frame scheduler has no available slot"};
+    }
+
     wait_for_image(image_index, frame.render_fence);
 
     require_success(vkResetFences(context_.device(), 1, &frame.render_fence), "vkResetFences");
@@ -365,9 +308,12 @@ bool SwapchainRenderer::render_frame(const platform::Window& window)
 
     submit_frame(frame, image_index);
 
-    const VkResult present_result = present_frame(image_index);
+    if (!frame_scheduler_.mark_submitted(*frame_token))
+    {
+        throw std::runtime_error{"RHI frame submission was rejected"};
+    }
 
-    current_frame_ = (current_frame_ + 1) % frames_in_flight;
+    const VkResult present_result = present_frame(image_index);
 
     const bool presentation_changed = present_result == VK_ERROR_OUT_OF_DATE_KHR ||
                                       present_result == VK_SUBOPTIMAL_KHR ||
@@ -465,6 +411,7 @@ bool SwapchainRenderer::recreate_swapchain(const platform::Window& window)
 
     require_success(vkDeviceWaitIdle(context_.device()), "vkDeviceWaitIdle(swapchain recreation)");
 
+    frame_scheduler_.reset();
     destroy_swapchain();
 
     const bool created = create_swapchain(window);
@@ -487,9 +434,7 @@ bool SwapchainRenderer::create_swapchain(const platform::Window& window)
         throw std::runtime_error{"Vulkan surface images cannot be color attachments"};
     }
 
-    const platform::WindowSize pixel_size = window.pixel_size();
-
-    const VkExtent2D extent = choose_swapchain_extent(capabilities, pixel_size);
+    const VkExtent2D extent = choose_swapchain_extent(capabilities, window.pixel_size());
 
     if (extent.width == 0 || extent.height == 0)
     {
@@ -582,6 +527,7 @@ bool SwapchainRenderer::create_swapchain(const platform::Window& window)
     };
 
     create_image_views();
+    create_image_resources();
     create_render_finished_semaphores();
 
     return true;
@@ -622,6 +568,37 @@ void SwapchainRenderer::create_image_views()
     }
 }
 
+void SwapchainRenderer::create_image_resources()
+{
+    image_resources_.reserve(images_.size());
+
+    const rhi::TextureDesc descriptor{
+        .width = info_.width,
+        .height = info_.height,
+        .format = texture_format(info_.format),
+        .external = true,
+    };
+
+    for (std::size_t index = 0; index < images_.size(); ++index)
+    {
+        static_cast<void>(index);
+
+        const auto resource = resource_registry_.create_texture(descriptor);
+
+        if (!resource.has_value())
+        {
+            throw std::runtime_error{"RHI rejected a swapchain image descriptor"};
+        }
+
+        if (!resource_states_.track(*resource, rhi::ResourceState::undefined))
+        {
+            throw std::runtime_error{"RHI failed to track a swapchain image"};
+        }
+
+        image_resources_.push_back(*resource);
+    }
+}
+
 void SwapchainRenderer::create_render_finished_semaphores()
 {
     render_finished_.assign(images_.size(), VK_NULL_HANDLE);
@@ -658,6 +635,15 @@ void SwapchainRenderer::destroy_swapchain() noexcept
     }
 
     image_views_.clear();
+
+    for (const rhi::TextureHandle resource : image_resources_)
+    {
+        static_cast<void>(resource_states_.forget(resource));
+
+        static_cast<void>(resource_registry_.destroy_texture(resource));
+    }
+
+    image_resources_.clear();
     images_.clear();
     image_fences_.clear();
 
@@ -708,12 +694,12 @@ void SwapchainRenderer::destroy_command_resources() noexcept
 
 void SwapchainRenderer::wait_for_image(std::uint32_t image_index, VkFence frame_fence)
 {
-    if (image_index >= image_fences_.size())
+    if (static_cast<std::size_t>(image_index) >= image_fences_.size())
     {
         throw std::runtime_error{"acquired swapchain image index is invalid"};
     }
 
-    const VkFence previous_fence = image_fences_[image_index];
+    const VkFence previous_fence = image_fences_[static_cast<std::size_t>(image_index)];
 
     if (previous_fence != VK_NULL_HANDLE)
     {
@@ -725,11 +711,19 @@ void SwapchainRenderer::wait_for_image(std::uint32_t image_index, VkFence frame_
                         "vkWaitForFences(image)");
     }
 
-    image_fences_[image_index] = frame_fence;
+    image_fences_[static_cast<std::size_t>(image_index)] = frame_fence;
 }
 
 void SwapchainRenderer::record_commands(VkCommandBuffer command_buffer, std::uint32_t image_index)
 {
+    const std::size_t resource_index = static_cast<std::size_t>(image_index);
+
+    if (resource_index >= images_.size() || resource_index >= image_views_.size() ||
+        resource_index >= image_resources_.size())
+    {
+        throw std::runtime_error{"swapchain recording index is invalid"};
+    }
+
     VkCommandBufferBeginInfo begin_info{};
 
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -738,15 +732,24 @@ void SwapchainRenderer::record_commands(VkCommandBuffer command_buffer, std::uin
 
     require_success(vkBeginCommandBuffer(command_buffer, &begin_info), "vkBeginCommandBuffer");
 
-    const VkImageMemoryBarrier2 to_render = begin_rendering_barrier(images_[image_index]);
+    const auto to_render = resource_states_.transition(image_resources_[resource_index],
+                                                       rhi::ResourceState::color_attachment);
 
-    apply_image_barrier(command_buffer, to_render);
+    if (!to_render.has_value())
+    {
+        throw std::runtime_error{"RHI rejected the color-attachment transition"};
+    }
+
+    const VkImageMemoryBarrier2 render_barrier =
+        make_image_barrier(images_[resource_index], *to_render);
+
+    apply_image_barrier(command_buffer, render_barrier);
 
     VkRenderingAttachmentInfo color_attachment{};
 
     color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 
-    color_attachment.imageView = image_views_[image_index];
+    color_attachment.imageView = image_views_[resource_index];
 
     color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
@@ -788,16 +791,27 @@ void SwapchainRenderer::record_commands(VkCommandBuffer command_buffer, std::uin
 
     vkCmdEndRendering(command_buffer);
 
-    const VkImageMemoryBarrier2 to_present = present_barrier(images_[image_index]);
+    const auto to_present =
+        resource_states_.transition(image_resources_[resource_index], rhi::ResourceState::present);
 
-    apply_image_barrier(command_buffer, to_present);
+    if (!to_present.has_value())
+    {
+        throw std::runtime_error{"RHI rejected the presentation transition"};
+    }
+
+    const VkImageMemoryBarrier2 presentation_barrier =
+        make_image_barrier(images_[resource_index], *to_present);
+
+    apply_image_barrier(command_buffer, presentation_barrier);
 
     require_success(vkEndCommandBuffer(command_buffer), "vkEndCommandBuffer");
 }
 
 void SwapchainRenderer::submit_frame(const FrameResources& frame, std::uint32_t image_index)
 {
-    if (image_index >= render_finished_.size())
+    const std::size_t semaphore_index = static_cast<std::size_t>(image_index);
+
+    if (semaphore_index >= render_finished_.size())
     {
         throw std::runtime_error{"render-completion semaphore index is invalid"};
     }
@@ -820,7 +834,7 @@ void SwapchainRenderer::submit_frame(const FrameResources& frame, std::uint32_t 
 
     signal_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 
-    signal_info.semaphore = render_finished_[image_index];
+    signal_info.semaphore = render_finished_[semaphore_index];
 
     signal_info.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 
@@ -843,12 +857,14 @@ void SwapchainRenderer::submit_frame(const FrameResources& frame, std::uint32_t 
 
 VkResult SwapchainRenderer::present_frame(std::uint32_t image_index)
 {
-    if (image_index >= render_finished_.size())
+    const std::size_t semaphore_index = static_cast<std::size_t>(image_index);
+
+    if (semaphore_index >= render_finished_.size())
     {
         throw std::runtime_error{"presentation semaphore index is invalid"};
     }
 
-    const VkSemaphore wait_semaphore = render_finished_[image_index];
+    const VkSemaphore wait_semaphore = render_finished_[semaphore_index];
 
     VkPresentInfoKHR present_info{};
 
@@ -863,6 +879,21 @@ VkResult SwapchainRenderer::present_frame(std::uint32_t image_index)
     present_info.pImageIndices = &image_index;
 
     return vkQueuePresentKHR(context_.present_queue(), &present_info);
+}
+
+rhi::TextureFormat SwapchainRenderer::texture_format(VkFormat format) noexcept
+{
+    switch (format)
+    {
+        case VK_FORMAT_B8G8R8A8_SRGB:
+            return rhi::TextureFormat::bgra8_srgb;
+
+        case VK_FORMAT_R8G8B8A8_SRGB:
+            return rhi::TextureFormat::rgba8_srgb;
+
+        default:
+            return rhi::TextureFormat::other;
+    }
 }
 
 } // namespace afterlight::graphics::vulkan
