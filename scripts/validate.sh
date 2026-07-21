@@ -74,8 +74,8 @@ print(len(json.load(sys.stdin).get("tests", [])))
 '
     )"
 
-    [[ "$count" == "8" ]] || {
-        echo "Expected 8 tests, found $count"
+    [[ "$count" == "11" ]] || {
+        echo "Expected 11 tests, found $count"
         return 1
     }
 }
@@ -90,7 +90,7 @@ platform_smoke()
             --smoke
     )"
 
-    expected="Afterlight 0.3.0-dev | platform=dummy | window=1280x720"
+    expected="Afterlight 0.4.0-dev | platform=dummy | window=1280x720"
 
     [[ "$output" == "$expected" ]] || {
         echo "Expected: $expected"
@@ -111,13 +111,14 @@ vulkan_smoke()
             --vulkan-smoke
     )"
 
-    [[ "$output" == \
-        Afterlight\ 0.3.0-dev\ \|\ backend=vulkan\ \|\ device=*\ \|\ presented=3\ \|\ extent=*x*\ \|\ images=*\ \|\ format=*\ \|\ validation=on ]] ||
-    {
+    if ! grep -Eq \
+        '^Afterlight 0[.]4[.]0-dev [|] backend=vulkan [|] device=.+ [|] presented=3 [|] extent=[0-9]+x[0-9]+ [|] images=[0-9]+ [|] format=[0-9]+ [|] validation=on$' \
+        <<<"$output"
+    then
         echo "Unexpected Vulkan smoke output:"
         echo "$output"
         return 1
-    }
+    fi
 }
 
 printf '\nAfterlight Validation\n\n'

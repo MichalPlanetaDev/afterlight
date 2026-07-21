@@ -2,6 +2,9 @@
 
 #include <afterlight/graphics/vulkan/vulkan_context.hpp>
 #include <afterlight/platform/platform.hpp>
+#include <afterlight/rhi/frame_scheduler.hpp>
+#include <afterlight/rhi/resource.hpp>
+#include <afterlight/rhi/resource_state_tracker.hpp>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -69,6 +72,7 @@ private:
     [[nodiscard]] bool create_swapchain(const platform::Window& window);
 
     void create_image_views();
+    void create_image_resources();
     void create_render_finished_semaphores();
 
     void destroy_swapchain() noexcept;
@@ -83,6 +87,8 @@ private:
 
     [[nodiscard]] VkResult present_frame(std::uint32_t image_index);
 
+    [[nodiscard]] static rhi::TextureFormat texture_format(VkFormat format) noexcept;
+
     VulkanContext& context_;
 
     VkCommandPool command_pool_{VK_NULL_HANDLE};
@@ -92,10 +98,15 @@ private:
     std::vector<VkImageView> image_views_;
     std::vector<VkSemaphore> render_finished_;
     std::vector<VkFence> image_fences_;
+    std::vector<rhi::TextureHandle> image_resources_;
 
     std::array<FrameResources, frames_in_flight> frames_{};
 
-    std::size_t current_frame_{};
+    rhi::ResourceRegistry resource_registry_;
+    rhi::ResourceStateTracker resource_states_;
+
+    rhi::FrameScheduler frame_scheduler_{static_cast<std::uint32_t>(frames_in_flight)};
+
     bool resize_requested_{};
 
     SwapchainInfo info_;
