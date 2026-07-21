@@ -24,7 +24,8 @@
       "cacheVariables": {
         "BUILD_TESTING": "ON",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "AFTERLIGHT_WARNINGS_AS_ERRORS": "ON"
+        "AFTERLIGHT_WARNINGS_AS_ERRORS": "ON",
+        "AFTERLIGHT_ENABLE_VULKAN_RUNTIME_TESTS": "ON"
       }
     },
     {
@@ -70,7 +71,8 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "BUILD_TESTING": "ON",
-        "AFTERLIGHT_WARNINGS_AS_ERRORS": "ON"
+        "AFTERLIGHT_WARNINGS_AS_ERRORS": "ON",
+        "AFTERLIGHT_ENABLE_VULKAN_RUNTIME_TESTS": "OFF"
       }
     }
   ],

@@ -7,8 +7,8 @@ BuildInfo current_build_info() noexcept
 {
     return {
         .product_name = "Afterlight",
-        .semantic_version = "0.1.0-dev",
-        .milestone = "Native Platform",
+        .semantic_version = "0.2.0-dev",
+        .milestone = "Vulkan Device",
         .revision = "local",
     };
 }

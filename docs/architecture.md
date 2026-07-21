@@ -1,46 +1,26 @@
 # Architecture
 
-Afterlight separates process policy, operating-system integration and
-graphics implementation.
+Afterlight separates application policy, platform integration and graphics ownership.
 
 ```text
 observatory application
-     |           |
-     v           v
-core runtime   platform
-                 |
-                SDL3
-                 |
-            native window
+        |
+        +--- core lifecycle
+        |
+        +--- SDL3 platform
+        |       |
+        |       +--- native window
+        |       +--- Vulkan surface bridge
+        |
+        +--- Vulkan backend
+                |
+                +--- instance and validation
+                +--- physical-device policy
+                +--- logical device and queues
 ```
 
-`afterlight_core` owns lifecycle state and build identity.
-`afterlight_platform` owns SDL initialization, native-window lifetime
-and event translation. SDL types remain inside the platform
-implementation; the application consumes project-owned configuration,
-size and event values.
+The platform layer owns SDL types and native-window lifetime. Its Vulkan bridge exposes only the instance extensions and surface operations required by the graphics backend.
 
-The graphics layer is deliberately absent from this milestone. The next
-boundary adds Vulkan instance creation and asks the platform module to
-create a presentation surface without exposing window-system details to
-renderer code.
+The Vulkan backend owns loader initialization, instance lifetime, validation messaging, surface lifetime, adapter qualification and logical-device creation. Adapter policy is isolated from Vulkan handles and tested with synthetic capability descriptions.
 
-The eventual rendering stack remains:
-
-```text
-application
-    |
-platform
-    |
-   RHI
- /     \
-Vulkan  Direct3D 12
-    |
-render graph
-    |
-frame renderer
-```
-
-Vulkan is the reference implementation. Direct3D 12 is added against
-proven resource and synchronization contracts rather than developed as
-a parallel speculative abstraction.
+The next boundary adds swapchain ownership, frame contexts, command buffers, semaphores, fences and resize-safe presentation.
