@@ -3,12 +3,48 @@
 namespace afterlight::core
 {
 
+LifecycleTransitionResult::LifecycleTransitionResult(bool has_value,
+                                                     LifecycleTransitionError error) noexcept
+    : has_value_{has_value}, error_{error}
+{
+}
+
+LifecycleTransitionResult LifecycleTransitionResult::success() noexcept
+{
+    return {
+        true,
+        {
+            .state = LifecycleState::constructed,
+            .action = LifecycleAction::initialize,
+        },
+    };
+}
+
+LifecycleTransitionResult
+LifecycleTransitionResult::rejection(LifecycleTransitionError error) noexcept
+{
+    return {
+        false,
+        error,
+    };
+}
+
+bool LifecycleTransitionResult::has_value() const noexcept
+{
+    return has_value_;
+}
+
+LifecycleTransitionError LifecycleTransitionResult::error() const noexcept
+{
+    return error_;
+}
+
 LifecycleState ApplicationLifecycle::state() const noexcept
 {
     return state_;
 }
 
-std::expected<void, LifecycleTransitionError> ApplicationLifecycle::initialize() noexcept
+LifecycleTransitionResult ApplicationLifecycle::initialize() noexcept
 {
     if (state_ != LifecycleState::constructed)
     {
@@ -16,10 +52,10 @@ std::expected<void, LifecycleTransitionError> ApplicationLifecycle::initialize()
     }
 
     state_ = LifecycleState::initialized;
-    return {};
+    return LifecycleTransitionResult::success();
 }
 
-std::expected<void, LifecycleTransitionError> ApplicationLifecycle::start() noexcept
+LifecycleTransitionResult ApplicationLifecycle::start() noexcept
 {
     if (state_ != LifecycleState::initialized)
     {
@@ -27,10 +63,10 @@ std::expected<void, LifecycleTransitionError> ApplicationLifecycle::start() noex
     }
 
     state_ = LifecycleState::running;
-    return {};
+    return LifecycleTransitionResult::success();
 }
 
-std::expected<void, LifecycleTransitionError> ApplicationLifecycle::request_stop() noexcept
+LifecycleTransitionResult ApplicationLifecycle::request_stop() noexcept
 {
     if (state_ != LifecycleState::running)
     {
@@ -38,10 +74,10 @@ std::expected<void, LifecycleTransitionError> ApplicationLifecycle::request_stop
     }
 
     state_ = LifecycleState::stop_requested;
-    return {};
+    return LifecycleTransitionResult::success();
 }
 
-std::expected<void, LifecycleTransitionError> ApplicationLifecycle::fail() noexcept
+LifecycleTransitionResult ApplicationLifecycle::fail() noexcept
 {
     switch (state_)
     {
@@ -50,7 +86,7 @@ std::expected<void, LifecycleTransitionError> ApplicationLifecycle::fail() noexc
         case LifecycleState::running:
         case LifecycleState::stop_requested:
             state_ = LifecycleState::failed;
-            return {};
+            return LifecycleTransitionResult::success();
 
         case LifecycleState::failed:
         case LifecycleState::shutdown:
@@ -60,7 +96,7 @@ std::expected<void, LifecycleTransitionError> ApplicationLifecycle::fail() noexc
     return reject(LifecycleAction::fail);
 }
 
-std::expected<void, LifecycleTransitionError> ApplicationLifecycle::shutdown() noexcept
+LifecycleTransitionResult ApplicationLifecycle::shutdown() noexcept
 {
     switch (state_)
     {
@@ -68,7 +104,7 @@ std::expected<void, LifecycleTransitionError> ApplicationLifecycle::shutdown() n
         case LifecycleState::stop_requested:
         case LifecycleState::failed:
             state_ = LifecycleState::shutdown;
-            return {};
+            return LifecycleTransitionResult::success();
 
         case LifecycleState::constructed:
         case LifecycleState::running:
@@ -79,10 +115,9 @@ std::expected<void, LifecycleTransitionError> ApplicationLifecycle::shutdown() n
     return reject(LifecycleAction::shutdown);
 }
 
-std::expected<void, LifecycleTransitionError>
-ApplicationLifecycle::reject(LifecycleAction action) const noexcept
+LifecycleTransitionResult ApplicationLifecycle::reject(LifecycleAction action) const noexcept
 {
-    return std::unexpected(LifecycleTransitionError{
+    return LifecycleTransitionResult::rejection({
         .state = state_,
         .action = action,
     });

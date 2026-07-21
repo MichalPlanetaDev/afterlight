@@ -1,7 +1,5 @@
 #pragma once
 
-#include <expected>
-
 namespace afterlight::core
 {
 
@@ -30,24 +28,42 @@ struct LifecycleTransitionError final
     LifecycleAction action;
 };
 
+class LifecycleTransitionResult final
+{
+public:
+    [[nodiscard]] static LifecycleTransitionResult success() noexcept;
+
+    [[nodiscard]] static LifecycleTransitionResult
+    rejection(LifecycleTransitionError error) noexcept;
+
+    [[nodiscard]] bool has_value() const noexcept;
+
+    [[nodiscard]] LifecycleTransitionError error() const noexcept;
+
+private:
+    LifecycleTransitionResult(bool has_value, LifecycleTransitionError error) noexcept;
+
+    bool has_value_;
+    LifecycleTransitionError error_;
+};
+
 class ApplicationLifecycle final
 {
 public:
     [[nodiscard]] LifecycleState state() const noexcept;
 
-    [[nodiscard]] std::expected<void, LifecycleTransitionError> initialize() noexcept;
+    [[nodiscard]] LifecycleTransitionResult initialize() noexcept;
 
-    [[nodiscard]] std::expected<void, LifecycleTransitionError> start() noexcept;
+    [[nodiscard]] LifecycleTransitionResult start() noexcept;
 
-    [[nodiscard]] std::expected<void, LifecycleTransitionError> request_stop() noexcept;
+    [[nodiscard]] LifecycleTransitionResult request_stop() noexcept;
 
-    [[nodiscard]] std::expected<void, LifecycleTransitionError> fail() noexcept;
+    [[nodiscard]] LifecycleTransitionResult fail() noexcept;
 
-    [[nodiscard]] std::expected<void, LifecycleTransitionError> shutdown() noexcept;
+    [[nodiscard]] LifecycleTransitionResult shutdown() noexcept;
 
 private:
-    [[nodiscard]] std::expected<void, LifecycleTransitionError>
-    reject(LifecycleAction action) const noexcept;
+    [[nodiscard]] LifecycleTransitionResult reject(LifecycleAction action) const noexcept;
 
     LifecycleState state_{LifecycleState::constructed};
 };
