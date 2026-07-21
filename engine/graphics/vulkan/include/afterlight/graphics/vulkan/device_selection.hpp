@@ -36,6 +36,8 @@ struct AdapterCandidate final
     bool swapchain_extension{};
     bool surface_formats{};
     bool present_modes{};
+    bool dynamic_rendering{};
+    bool synchronization2{};
     std::vector<QueueFamilySupport> queue_families;
 };
 

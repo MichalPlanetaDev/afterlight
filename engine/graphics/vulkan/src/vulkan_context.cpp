@@ -181,6 +181,18 @@ void require_success(VkResult result, std::string_view operation)
 
     vkGetPhysicalDeviceProperties(physical_device, &properties);
 
+    VkPhysicalDeviceVulkan13Features features13{};
+
+    features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+
+    VkPhysicalDeviceFeatures2 features{};
+
+    features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+
+    features.pNext = &features13;
+
+    vkGetPhysicalDeviceFeatures2(physical_device, &features);
+
     return {
         .name = properties.deviceName,
         .kind = adapter_kind(properties.deviceType),
@@ -190,6 +202,8 @@ void require_success(VkResult result, std::string_view operation)
             device_extension_available(physical_device, VK_KHR_SWAPCHAIN_EXTENSION_NAME),
         .surface_formats = has_surface_formats(physical_device, surface),
         .present_modes = has_present_modes(physical_device, surface),
+        .dynamic_rendering = features13.dynamicRendering == VK_TRUE,
+        .synchronization2 = features13.synchronization2 == VK_TRUE,
         .queue_families = queue_family_support(physical_device, surface),
     };
 }
@@ -320,11 +334,11 @@ void VulkanContext::create_instance(const VulkanContextOptions& options)
 
     application_info.pApplicationName = options.application_name.c_str();
 
-    application_info.applicationVersion = VK_MAKE_API_VERSION(0, 0, 2, 0);
+    application_info.applicationVersion = VK_MAKE_API_VERSION(0, 0, 3, 0);
 
     application_info.pEngineName = "Afterlight";
 
-    application_info.engineVersion = VK_MAKE_API_VERSION(0, 0, 2, 0);
+    application_info.engineVersion = VK_MAKE_API_VERSION(0, 0, 3, 0);
 
     application_info.apiVersion = VK_API_VERSION_1_3;
 
@@ -410,7 +424,7 @@ void VulkanContext::select_physical_device()
     if (!selection.has_value())
     {
         throw std::runtime_error{
-            "no Vulkan 1.3 device supports graphics, presentation and VK_KHR_swapchain"};
+            "no Vulkan 1.3 device supports presentation, dynamic rendering and synchronization2"};
     }
 
     physical_device_ = physical_devices[selection->candidate_index];
@@ -460,11 +474,18 @@ void VulkanContext::create_logical_device()
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     };
 
-    VkPhysicalDeviceFeatures features{};
+    VkPhysicalDeviceVulkan13Features features13{};
+
+    features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+
+    features13.dynamicRendering = VK_TRUE;
+    features13.synchronization2 = VK_TRUE;
 
     VkDeviceCreateInfo create_info{};
 
     create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+
+    create_info.pNext = &features13;
 
     create_info.queueCreateInfoCount = static_cast<std::uint32_t>(queue_info_count);
 
@@ -473,8 +494,6 @@ void VulkanContext::create_logical_device()
     create_info.enabledExtensionCount = static_cast<std::uint32_t>(device_extensions.size());
 
     create_info.ppEnabledExtensionNames = device_extensions.data();
-
-    create_info.pEnabledFeatures = &features;
 
     require_success(vkCreateDevice(physical_device_, &create_info, nullptr, &device_),
                     "vkCreateDevice");

@@ -43,6 +43,8 @@ valid_candidate(std::string name, afterlight::graphics::vulkan::AdapterKind kind
         .swapchain_extension = true,
         .surface_formats = true,
         .present_modes = true,
+        .dynamic_rendering = true,
+        .synchronization2 = true,
         .queue_families =
             {
                 {
@@ -116,6 +118,28 @@ int main()
 
     test.expect(!select_adapter(old_api_candidates).has_value(),
                 "an adapter below Vulkan 1.3 is rejected");
+
+    AdapterCandidate missing_dynamic_rendering =
+        valid_candidate("No dynamic rendering", AdapterKind::discrete);
+
+    missing_dynamic_rendering.dynamic_rendering = false;
+
+    const std::array<AdapterCandidate, 1> missing_dynamic_rendering_candidates{
+        missing_dynamic_rendering};
+
+    test.expect(!select_adapter(missing_dynamic_rendering_candidates).has_value(),
+                "an adapter without dynamic rendering is rejected");
+
+    AdapterCandidate missing_synchronization2 =
+        valid_candidate("No synchronization2", AdapterKind::discrete);
+
+    missing_synchronization2.synchronization2 = false;
+
+    const std::array<AdapterCandidate, 1> missing_synchronization2_candidates{
+        missing_synchronization2};
+
+    test.expect(!select_adapter(missing_synchronization2_candidates).has_value(),
+                "an adapter without synchronization2 is rejected");
 
     AdapterCandidate no_present_queue = valid_candidate("No presentation", AdapterKind::discrete);
 

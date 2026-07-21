@@ -1,5 +1,6 @@
 #include <afterlight/core/application_lifecycle.hpp>
 #include <afterlight/core/build_info.hpp>
+#include <afterlight/graphics/vulkan/swapchain.hpp>
 #include <afterlight/graphics/vulkan/vulkan_context.hpp>
 #include <afterlight/platform/platform.hpp>
 #include <chrono>
@@ -7,7 +8,6 @@
 #include <cstdlib>
 #include <exception>
 #include <iostream>
-#include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -26,6 +26,11 @@ enum class RunMode : std::uint8_t
 struct RunOptions final
 {
     RunMode mode{RunMode::desktop};
+};
+
+struct FrameLoopResult final
+{
+    std::uint32_t presented_frames{};
 };
 
 [[nodiscard]] RunOptions parse_options(int argc, char* argv[])
@@ -74,15 +79,165 @@ void print_platform_smoke(const afterlight::core::BuildInfo& build,
               << size.height << '\n';
 }
 
-void print_vulkan_device(const afterlight::core::BuildInfo& build,
-                         const afterlight::graphics::vulkan::VulkanDeviceInfo& device)
+void print_desktop_device(const afterlight::core::BuildInfo& build,
+                          const afterlight::graphics::vulkan::VulkanDeviceInfo& device)
 {
     std::cout << build.product_name << ' ' << build.semantic_version << " | backend=vulkan"
               << " | device=" << device.name
               << " | api=" << afterlight::graphics::vulkan::format_api_version(device.api_version)
-              << " | graphics_queue=" << device.graphics_queue_family
-              << " | present_queue=" << device.present_queue_family
               << " | validation=" << (device.validation_enabled ? "on" : "off") << '\n';
+}
+
+void print_frame_smoke(const afterlight::core::BuildInfo& build,
+                       const afterlight::graphics::vulkan::VulkanDeviceInfo& device,
+                       const afterlight::graphics::vulkan::SwapchainInfo& swapchain,
+                       std::uint32_t presented_frames)
+{
+    std::cout << build.product_name << ' ' << build.semantic_version << " | backend=vulkan"
+              << " | device=" << device.name << " | presented=" << presented_frames
+              << " | extent=" << swapchain.width << 'x' << swapchain.height
+              << " | images=" << swapchain.image_count
+              << " | format=" << static_cast<std::uint32_t>(swapchain.format)
+              << " | validation=" << (device.validation_enabled ? "on" : "off") << '\n';
+}
+
+[[nodiscard]] bool process_events(afterlight::platform::Window& window,
+                                  afterlight::graphics::vulkan::SwapchainRenderer& renderer)
+{
+    afterlight::platform::PlatformEvent event{
+        .type = afterlight::platform::PlatformEventType::quit_requested,
+    };
+
+    while (window.poll_event(event))
+    {
+        switch (event.type)
+        {
+            case afterlight::platform::PlatformEventType::quit_requested:
+            case afterlight::platform::PlatformEventType::window_close_requested:
+                return false;
+
+            case afterlight::platform::PlatformEventType::window_resized:
+                renderer.request_resize();
+                break;
+        }
+    }
+
+    return true;
+}
+
+[[nodiscard]] FrameLoopResult
+run_frame_loop(afterlight::platform::Window& window,
+               afterlight::graphics::vulkan::SwapchainRenderer& renderer,
+               bool smoke)
+{
+    FrameLoopResult result;
+    std::uint32_t smoke_iterations = 0;
+    bool running = true;
+
+    while (running)
+    {
+        running = process_events(window, renderer);
+
+        if (running && renderer.render_frame(window))
+        {
+            ++result.presented_frames;
+        }
+
+        if (smoke)
+        {
+            ++smoke_iterations;
+
+            if (result.presented_frames >= 3)
+            {
+                running = false;
+            }
+            else if (smoke_iterations >= 240)
+            {
+                throw std::runtime_error{"Vulkan smoke did not present three frames"};
+            }
+        }
+
+        if (running)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds{1});
+        }
+    }
+
+    return result;
+}
+
+int run_platform_smoke(afterlight::core::ApplicationLifecycle& lifecycle)
+{
+    {
+        afterlight::platform::PlatformContext platform{{
+            .video_driver = "dummy",
+        }};
+
+        afterlight::platform::Window window{{
+            .title = "Afterlight - The Last Observatory",
+            .width = 1280,
+            .height = 720,
+            .resizable = true,
+            .hidden = true,
+            .vulkan = false,
+        }};
+
+        require_transition(lifecycle.start(), "start");
+
+        print_platform_smoke(afterlight::core::current_build_info(), platform, window);
+
+        require_transition(lifecycle.request_stop(), "request stop");
+    }
+
+    require_transition(lifecycle.shutdown(), "shutdown");
+
+    return EXIT_SUCCESS;
+}
+
+int run_vulkan(afterlight::core::ApplicationLifecycle& lifecycle, bool smoke)
+{
+    {
+        afterlight::platform::PlatformContext platform;
+
+        afterlight::platform::Window window{{
+            .title = "Afterlight - The Last Observatory",
+            .width = 1280,
+            .height = 720,
+            .resizable = true,
+            .hidden = smoke,
+            .vulkan = true,
+        }};
+
+        require_transition(lifecycle.start(), "start");
+
+        const afterlight::core::BuildInfo build = afterlight::core::current_build_info();
+
+        afterlight::graphics::vulkan::VulkanContext vulkan{window};
+
+        afterlight::graphics::vulkan::SwapchainRenderer renderer{
+            vulkan,
+            window,
+        };
+
+        if (!smoke)
+        {
+            print_desktop_device(build, vulkan.device_info());
+        }
+
+        const FrameLoopResult result = run_frame_loop(window, renderer, smoke);
+
+        if (smoke)
+        {
+            print_frame_smoke(
+                build, vulkan.device_info(), renderer.info(), result.presented_frames);
+        }
+
+        require_transition(lifecycle.request_stop(), "request stop");
+    }
+
+    require_transition(lifecycle.shutdown(), "shutdown");
+
+    return EXIT_SUCCESS;
 }
 
 int run(const RunOptions& options)
@@ -91,85 +246,12 @@ int run(const RunOptions& options)
 
     require_transition(lifecycle.initialize(), "initialize");
 
-    const bool platform_smoke = options.mode == RunMode::platform_smoke;
-
-    const bool finite_run = options.mode != RunMode::desktop;
-
-    afterlight::platform::PlatformOptions platform_options;
-
-    if (platform_smoke)
+    if (options.mode == RunMode::platform_smoke)
     {
-        platform_options.video_driver = "dummy";
+        return run_platform_smoke(lifecycle);
     }
 
-    afterlight::platform::PlatformContext platform{platform_options};
-
-    afterlight::platform::Window window{{
-        .title = "Afterlight - The Last Observatory",
-        .width = 1280,
-        .height = 720,
-        .resizable = true,
-        .hidden = finite_run,
-        .vulkan = !platform_smoke,
-    }};
-
-    std::unique_ptr<afterlight::graphics::vulkan::VulkanContext> vulkan;
-
-    if (!platform_smoke)
-    {
-        vulkan = std::make_unique<afterlight::graphics::vulkan::VulkanContext>(window);
-    }
-
-    require_transition(lifecycle.start(), "start");
-
-    const afterlight::core::BuildInfo build = afterlight::core::current_build_info();
-
-    if (platform_smoke)
-    {
-        print_platform_smoke(build, platform, window);
-    }
-    else
-    {
-        print_vulkan_device(build, vulkan->device_info());
-    }
-
-    bool running = true;
-    std::uint32_t frame_count = 0;
-
-    const std::uint32_t frame_limit = finite_run ? 2U : 0U;
-
-    while (running)
-    {
-        afterlight::platform::PlatformEvent event{
-            .type = afterlight::platform::PlatformEventType::quit_requested,
-        };
-
-        while (window.poll_event(event))
-        {
-            if (event.type == afterlight::platform::PlatformEventType::quit_requested ||
-                event.type == afterlight::platform::PlatformEventType::window_close_requested)
-            {
-                running = false;
-            }
-        }
-
-        ++frame_count;
-
-        if (frame_limit != 0U && frame_count >= frame_limit)
-        {
-            running = false;
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds{1});
-    }
-
-    require_transition(lifecycle.request_stop(), "request stop");
-
-    vulkan.reset();
-
-    require_transition(lifecycle.shutdown(), "shutdown");
-
-    return EXIT_SUCCESS;
+    return run_vulkan(lifecycle, options.mode == RunMode::vulkan_smoke);
 }
 
 } // namespace

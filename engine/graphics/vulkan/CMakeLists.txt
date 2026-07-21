@@ -4,6 +4,7 @@ add_library(
     afterlight_vulkan
     STATIC
         src/device_selection.cpp
+        src/swapchain.cpp
         src/vulkan_context.cpp
 )
 
