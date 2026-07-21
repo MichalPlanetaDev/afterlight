@@ -1,6 +1,5 @@
 #include <afterlight/core/application_lifecycle.hpp>
 #include <cstdlib>
-#include <expected>
 #include <iostream>
 #include <string_view>
 
@@ -33,17 +32,17 @@ private:
 using afterlight::core::ApplicationLifecycle;
 using afterlight::core::LifecycleAction;
 using afterlight::core::LifecycleState;
-using afterlight::core::LifecycleTransitionError;
+using afterlight::core::LifecycleTransitionResult;
 
 void expect_success(TestContext& test,
-                    const std::expected<void, LifecycleTransitionError>& result,
+                    const LifecycleTransitionResult& result,
                     std::string_view description)
 {
     test.expect(result.has_value(), description);
 }
 
 void expect_rejection(TestContext& test,
-                      const std::expected<void, LifecycleTransitionError>& result,
+                      const LifecycleTransitionResult& result,
                       LifecycleState expected_state,
                       LifecycleAction expected_action,
                       std::string_view description)
@@ -113,6 +112,7 @@ void test_duplicate_initialization_is_rejected(TestContext& test)
     ApplicationLifecycle lifecycle;
 
     const auto first_initialize = lifecycle.initialize();
+
     expect_success(test, first_initialize, "first initialization succeeds");
 
     const auto second_initialize = lifecycle.initialize();
@@ -143,6 +143,7 @@ void test_failure_can_shutdown_cleanly(TestContext& test)
     test.expect(lifecycle.state() == LifecycleState::failed, "failure enters the failed state");
 
     const auto shutdown = lifecycle.shutdown();
+
     expect_success(test, shutdown, "failed application can shut down");
 
     test.expect(lifecycle.state() == LifecycleState::shutdown,
@@ -154,11 +155,12 @@ void test_initialized_application_can_shutdown(TestContext& test)
     ApplicationLifecycle lifecycle;
 
     const auto initialized = lifecycle.initialize();
+
     expect_success(test, initialized, "application initializes before early exit");
 
     const auto shutdown = lifecycle.shutdown();
-    expect_success(
-        test, shutdown, "initialized application can shut down before entering the run loop");
+
+    expect_success(test, shutdown, "initialized application can shut down before running");
 
     test.expect(lifecycle.state() == LifecycleState::shutdown,
                 "early shutdown reaches the terminal state");
@@ -169,6 +171,7 @@ void test_running_application_cannot_skip_stop_request(TestContext& test)
     ApplicationLifecycle lifecycle;
 
     const auto initialized = lifecycle.initialize();
+
     expect_success(test, initialized, "direct-shutdown test initializes");
 
     const auto started = lifecycle.start();
