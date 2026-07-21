@@ -1,0 +1,17 @@
+/build/
+/out/
+/.cache/
+/.worktrees/
+
+CMakeUserPresets.json
+compile_commands.json
+
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+.DS_Store
+Thumbs.db

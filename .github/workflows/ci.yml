@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux Clang
+            preset: linux-clang-debug
+          - name: Linux GCC
+            preset: linux-gcc-debug
+          - name: Linux Sanitizers
+            preset: linux-clang-sanitize
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang ninja-build
+
+      - name: Configure
+        run: cmake --preset "${{ matrix.preset }}"
+
+      - name: Build
+        run: cmake --build --preset "${{ matrix.preset }}"
+
+      - name: Test
+        run: ctest --preset "${{ matrix.preset }}"
+
+  windows:
+    name: Windows MSVC
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure
+        run: cmake --preset windows-msvc-debug
+
+      - name: Build
+        run: cmake --build --preset windows-msvc-debug
+
+      - name: Test
+        run: ctest --preset windows-msvc-debug

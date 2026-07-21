@@ -1,0 +1,136 @@
+{
+  "version": 8,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "linux-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "BUILD_TESTING": "ON",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "AFTERLIGHT_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
+      "name": "linux-clang-debug",
+      "displayName": "Linux Clang Debug",
+      "inherits": "linux-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "linux-clang-sanitize",
+      "displayName": "Linux Clang Sanitizers",
+      "inherits": "linux-clang-debug",
+      "cacheVariables": {
+        "AFTERLIGHT_ENABLE_SANITIZERS": "ON"
+      }
+    },
+    {
+      "name": "linux-clang-analysis",
+      "displayName": "Linux Clang Static Analysis",
+      "inherits": "linux-clang-debug",
+      "cacheVariables": {
+        "AFTERLIGHT_ENABLE_CLANG_TIDY": "ON"
+      }
+    },
+    {
+      "name": "linux-gcc-debug",
+      "displayName": "Linux GCC Debug",
+      "inherits": "linux-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "windows-msvc-debug",
+      "displayName": "Windows MSVC Debug",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "BUILD_TESTING": "ON",
+        "AFTERLIGHT_WARNINGS_AS_ERRORS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-clang-debug",
+      "configurePreset": "linux-clang-debug"
+    },
+    {
+      "name": "linux-clang-sanitize",
+      "configurePreset": "linux-clang-sanitize"
+    },
+    {
+      "name": "linux-clang-analysis",
+      "configurePreset": "linux-clang-analysis"
+    },
+    {
+      "name": "linux-gcc-debug",
+      "configurePreset": "linux-gcc-debug"
+    },
+    {
+      "name": "windows-msvc-debug",
+      "configurePreset": "windows-msvc-debug",
+      "configuration": "Debug"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "linux-clang-debug",
+      "configurePreset": "linux-clang-debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "linux-clang-sanitize",
+      "configurePreset": "linux-clang-sanitize",
+      "environment": {
+        "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1:strict_string_checks=1",
+        "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1"
+      },
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "linux-gcc-debug",
+      "configurePreset": "linux-gcc-debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "windows-msvc-debug",
+      "configurePreset": "windows-msvc-debug",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    }
+  ]
+}
