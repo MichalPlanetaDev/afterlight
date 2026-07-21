@@ -2,6 +2,7 @@
 /out/
 /.cache/
 /.worktrees/
+/vcpkg_installed/
 
 CMakeUserPresets.json
 compile_commands.json

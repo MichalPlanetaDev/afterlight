@@ -45,3 +45,29 @@ set_tests_properties(
     PROPERTIES
         LABELS "unit;core;lifecycle"
 )
+
+add_executable(
+    afterlight_window_config_tests
+    window_config_test.cpp
+)
+
+target_link_libraries(
+    afterlight_window_config_tests
+    PRIVATE
+        Afterlight::Platform
+)
+
+afterlight_configure_target(
+    afterlight_window_config_tests
+)
+
+add_test(
+    NAME afterlight.platform.window_config
+    COMMAND afterlight_window_config_tests
+)
+
+set_tests_properties(
+    afterlight.platform.window_config
+    PROPERTIES
+        LABELS "unit;platform"
+)

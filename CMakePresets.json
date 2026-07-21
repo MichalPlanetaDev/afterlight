@@ -7,8 +7,18 @@
   },
   "configurePresets": [
     {
+      "name": "dependency-base",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/.cache/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_MANIFEST_DIR": "${sourceDir}",
+        "VCPKG_MANIFEST_INSTALL": "ON"
+      }
+    },
+    {
       "name": "linux-base",
       "hidden": true,
+      "inherits": "dependency-base",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
@@ -54,6 +64,7 @@
     {
       "name": "windows-msvc-debug",
       "displayName": "Windows MSVC Debug",
+      "inherits": "dependency-base",
       "generator": "Visual Studio 17 2022",
       "architecture": "x64",
       "binaryDir": "${sourceDir}/build/${presetName}",

@@ -1,58 +1,46 @@
 # Architecture
 
-Afterlight separates application policy from rendering implementation.
-The executable owns composition and process-level decisions. Reusable
-runtime behavior belongs to project libraries and does not depend on a
-concrete window system or graphics API.
-
-## Implemented boundary
-
-```text
-afterlight_observatory
-          |
-          v
-   afterlight_core
-     |         |
-     v         v
-build identity lifecycle
-```
-
-`afterlight_core` currently owns immutable build information and the
-application lifecycle state machine. Lifecycle transitions are explicit,
-invalid transitions return structured errors and normal shutdown requires
-a stop request before teardown.
-
-## Renderer boundary
-
-The next architectural layer introduces a platform module and a
-project-owned rendering hardware interface:
+Afterlight separates process policy, operating-system integration and
+graphics implementation.
 
 ```text
 observatory application
-          |
-     platform layer
-          |
-         RHI
-      /       \
-   Vulkan   Direct3D 12
-          |
-     render graph
-          |
-  renderer and debug views
+     |           |
+     v           v
+core runtime   platform
+                 |
+                SDL3
+                 |
+            native window
 ```
 
-Vulkan is implemented first. Direct3D 12 is added against the same
-resource, synchronization and command-submission contracts only after the
-Vulkan path is validated. Backend-specific behavior remains visible where
-the APIs differ; the abstraction is not intended to erase meaningful
-graphics concepts.
+`afterlight_core` owns lifecycle state and build identity.
+`afterlight_platform` owns SDL initialization, native-window lifetime
+and event translation. SDL types remain inside the platform
+implementation; the application consumes project-owned configuration,
+size and event values.
 
-The renderer will use HLSL compiled through DXC to SPIR-V and DXIL. The
-planned frame architecture combines deferred opaque rendering with
-forward paths for transparency and specialist materials. Engineering
-views expose real frame resources such as depth, normals, material data,
-motion vectors, lighting, volumetrics and temporal history.
+The graphics layer is deliberately absent from this milestone. The next
+boundary adds Vulkan instance creation and asks the platform module to
+create a presentation surface without exposing window-system details to
+renderer code.
 
-Generated geometry, materials, textures, animation and audio are treated
-as deterministic build products. Their authored sources remain code and
-versioned parameters rather than manually edited binary assets.
+The eventual rendering stack remains:
+
+```text
+application
+    |
+platform
+    |
+   RHI
+ /     \
+Vulkan  Direct3D 12
+    |
+render graph
+    |
+frame renderer
+```
+
+Vulkan is the reference implementation. Direct3D 12 is added against
+proven resource and synchronization contracts rather than developed as
+a parallel speculative abstraction.
