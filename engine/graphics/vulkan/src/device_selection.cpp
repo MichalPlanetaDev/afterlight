@@ -80,7 +80,8 @@ select_queues(std::span<const QueueFamilySupport> families)
 [[nodiscard]] bool meets_requirements(const AdapterCandidate& candidate) noexcept
 {
     return candidate.api_version >= VK_API_VERSION_1_3 && candidate.swapchain_extension &&
-           candidate.surface_formats && candidate.present_modes;
+           candidate.surface_formats && candidate.present_modes && candidate.dynamic_rendering &&
+           candidate.synchronization2;
 }
 
 } // namespace

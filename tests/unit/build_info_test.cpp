@@ -38,9 +38,9 @@ int main()
 
     test.expect(info.product_name == "Afterlight", "product name is stable");
 
-    test.expect(info.semantic_version == "0.2.0-dev", "Vulkan device version is explicit");
+    test.expect(info.semantic_version == "0.3.0-dev", "presented-frame version is explicit");
 
-    test.expect(info.milestone == "Vulkan Device", "current milestone is reported");
+    test.expect(info.milestone == "First Presented Frame", "current milestone is reported");
 
     test.expect(info.revision == "local", "unreleased revision is not fabricated");
 

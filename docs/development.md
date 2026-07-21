@@ -1,12 +1,10 @@
 # Development
 
-Linux setup and the complete local validation matrix use repository-owned scripts:
+Linux setup and validation:
 
-```bash
-./scripts/install-linux-prerequisites.sh
-./scripts/validate.sh all
-```
+    ./scripts/install-linux-prerequisites.sh
+    ./scripts/validate.sh all
 
-Runtime Vulkan tests execute through Xvfb with Mesa's software Vulkan implementation, making device and presentation-surface validation reproducible without a physical display. Windows CI compiles the complete Vulkan backend and runs hardware-independent tests without assuming a GPU is available on the runner.
+Vulkan presentation tests run through Xvfb and Mesa's software Vulkan implementation. The smoke path creates a hidden Vulkan window, presents three validation-clean frames and reports the adapter, swapchain extent, image count and format.
 
-Full dependency, compiler, static-analysis and test output is retained under `out/logs/`; the terminal shows only phase status and failure diagnostics.
+Windows CI compiles the presentation backend and runs hardware-independent tests without assuming that the hosted runner exposes a presentation-capable GPU.

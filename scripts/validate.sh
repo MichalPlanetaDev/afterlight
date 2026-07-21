@@ -40,10 +40,10 @@ run()
         printf '\n[FAIL] %s\n\n' "$name"
 
         grep -Ei \
-            'error:|fatal:|failed|failure|undefined reference|tests failed|validation error' \
+            'error:|fatal:|failed|failure|undefined reference|tests failed|validation error|VUID-' \
             "$log" |
-            tail -n 40 ||
-            tail -n 40 "$log"
+            tail -n 50 ||
+            tail -n 50 "$log"
 
         printf '\nLog: %s\n' "$log"
         exit "$status"
@@ -74,8 +74,8 @@ print(len(json.load(sys.stdin).get("tests", [])))
 '
     )"
 
-    [[ "$count" == "7" ]] || {
-        echo "Expected 7 tests, found $count"
+    [[ "$count" == "8" ]] || {
+        echo "Expected 8 tests, found $count"
         return 1
     }
 }
@@ -90,7 +90,7 @@ platform_smoke()
             --smoke
     )"
 
-    expected="Afterlight 0.2.0-dev | platform=dummy | window=1280x720"
+    expected="Afterlight 0.3.0-dev | platform=dummy | window=1280x720"
 
     [[ "$output" == "$expected" ]] || {
         echo "Expected: $expected"
@@ -112,7 +112,7 @@ vulkan_smoke()
     )"
 
     [[ "$output" == \
-        Afterlight\ 0.2.0-dev\ \|\ backend=vulkan\ \|\ device=*\ \|\ api=*\ \|\ graphics_queue=*\ \|\ present_queue=*\ \|\ validation=on ]] ||
+        Afterlight\ 0.3.0-dev\ \|\ backend=vulkan\ \|\ device=*\ \|\ presented=3\ \|\ extent=*x*\ \|\ images=*\ \|\ format=*\ \|\ validation=on ]] ||
     {
         echo "Unexpected Vulkan smoke output:"
         echo "$output"

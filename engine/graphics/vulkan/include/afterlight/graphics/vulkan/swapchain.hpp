@@ -1,0 +1,104 @@
+#pragma once
+
+#include <afterlight/graphics/vulkan/vulkan_context.hpp>
+#include <afterlight/platform/platform.hpp>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <span>
+#include <vector>
+#include <volk.h>
+
+namespace afterlight::graphics::vulkan
+{
+
+struct SwapchainInfo final
+{
+    std::uint32_t width{};
+    std::uint32_t height{};
+    std::uint32_t image_count{};
+    VkFormat format{VK_FORMAT_UNDEFINED};
+    VkPresentModeKHR present_mode{VK_PRESENT_MODE_FIFO_KHR};
+};
+
+[[nodiscard]] VkSurfaceFormatKHR choose_surface_format(std::span<const VkSurfaceFormatKHR> formats);
+
+[[nodiscard]] VkPresentModeKHR choose_present_mode(std::span<const VkPresentModeKHR> modes);
+
+[[nodiscard]] VkExtent2D choose_swapchain_extent(const VkSurfaceCapabilitiesKHR& capabilities,
+                                                 platform::WindowSize pixel_size) noexcept;
+
+[[nodiscard]] std::uint32_t
+choose_swapchain_image_count(const VkSurfaceCapabilitiesKHR& capabilities) noexcept;
+
+class SwapchainRenderer final
+{
+public:
+    SwapchainRenderer(VulkanContext& context, const platform::Window& window);
+
+    ~SwapchainRenderer();
+
+    SwapchainRenderer(const SwapchainRenderer&) = delete;
+    SwapchainRenderer& operator=(const SwapchainRenderer&) = delete;
+    SwapchainRenderer(SwapchainRenderer&&) = delete;
+    SwapchainRenderer& operator=(SwapchainRenderer&&) = delete;
+
+    [[nodiscard]] bool render_frame(const platform::Window& window);
+
+    void request_resize() noexcept;
+
+    [[nodiscard]] const SwapchainInfo& info() const noexcept;
+
+private:
+    static constexpr std::size_t frames_in_flight = 2;
+
+    struct FrameResources final
+    {
+        VkCommandBuffer command_buffer{VK_NULL_HANDLE};
+
+        VkSemaphore image_available{VK_NULL_HANDLE};
+
+        VkFence render_fence{VK_NULL_HANDLE};
+    };
+
+    void create_command_resources();
+    void create_frame_resources();
+
+    [[nodiscard]] bool recreate_swapchain(const platform::Window& window);
+
+    [[nodiscard]] bool create_swapchain(const platform::Window& window);
+
+    void create_image_views();
+    void create_render_finished_semaphores();
+
+    void destroy_swapchain() noexcept;
+    void destroy_frame_resources() noexcept;
+    void destroy_command_resources() noexcept;
+
+    void wait_for_image(std::uint32_t image_index, VkFence frame_fence);
+
+    void record_commands(VkCommandBuffer command_buffer, std::uint32_t image_index);
+
+    void submit_frame(const FrameResources& frame, std::uint32_t image_index);
+
+    [[nodiscard]] VkResult present_frame(std::uint32_t image_index);
+
+    VulkanContext& context_;
+
+    VkCommandPool command_pool_{VK_NULL_HANDLE};
+    VkSwapchainKHR swapchain_{VK_NULL_HANDLE};
+
+    std::vector<VkImage> images_;
+    std::vector<VkImageView> image_views_;
+    std::vector<VkSemaphore> render_finished_;
+    std::vector<VkFence> image_fences_;
+
+    std::array<FrameResources, frames_in_flight> frames_{};
+
+    std::size_t current_frame_{};
+    bool resize_requested_{};
+
+    SwapchainInfo info_;
+};
+
+} // namespace afterlight::graphics::vulkan
