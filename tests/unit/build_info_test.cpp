@@ -11,13 +11,12 @@ class TestContext final
 public:
     void expect(bool condition, std::string_view description)
     {
-        if (condition)
+        if (!condition)
         {
-            return;
-        }
+            ++failures_;
 
-        ++failures_;
-        std::cerr << "FAIL: " << description << '\n';
+            std::cerr << "FAIL: " << description << '\n';
+        }
     }
 
     [[nodiscard]] int exit_code() const noexcept
@@ -34,11 +33,15 @@ private:
 int main()
 {
     TestContext test;
+
     const afterlight::core::BuildInfo info = afterlight::core::current_build_info();
 
     test.expect(info.product_name == "Afterlight", "product name is stable");
-    test.expect(info.semantic_version == "0.0.0-dev", "development version is explicit");
-    test.expect(info.milestone == "Milestone Zero", "milestone is reported");
+
+    test.expect(info.semantic_version == "0.1.0-dev", "native platform version is explicit");
+
+    test.expect(info.milestone == "Native Platform", "current milestone is reported");
+
     test.expect(info.revision == "local", "unreleased revision is not fabricated");
 
     return test.exit_code();

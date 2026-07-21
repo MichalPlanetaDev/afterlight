@@ -1,10 +1,22 @@
 # Development
 
-Work is performed on focused branches and enters `main` through pull
-requests. Each branch must build locally before publication; GitHub
-Actions repeats the supported compiler and platform matrix.
+Afterlight uses a pinned vcpkg manifest, CMake presets and mandatory
+pull-request validation.
 
-The normal Linux validation path is:
+Linux setup:
+
+```bash
+./scripts/install-linux-prerequisites.sh
+./scripts/bootstrap-vcpkg.sh
+```
+
+Windows setup:
+
+```powershell
+./scripts/bootstrap-vcpkg.ps1
+```
+
+The normal Linux validation matrix is:
 
 ```bash
 cmake --preset linux-clang-debug
@@ -15,16 +27,17 @@ cmake --preset linux-clang-sanitize
 cmake --build --preset linux-clang-sanitize
 ctest --preset linux-clang-sanitize
 
+cmake --preset linux-clang-analysis
+cmake --build --preset linux-clang-analysis
+
 cmake --preset linux-gcc-debug
 cmake --build --preset linux-gcc-debug
 ctest --preset linux-gcc-debug
 ```
 
-Project-owned code is compiled with warnings as errors. Production
-behavior is introduced behind a failing test when the behavior can be
-tested independently. Commits remain narrow enough to review without
-mixing unrelated architecture, formatting and feature changes.
+Normal execution creates the native resizable window. `--smoke` selects
+SDL's dummy video backend and exercises initialization, window creation,
+event polling and shutdown without a display server.
 
-Generated build directories are local. `CMakeUserPresets.json` may be
-used for machine-specific compiler launchers or paths and is intentionally
-excluded from version control.
+Project-owned code is formatted before commit and compiled with warnings as
+errors. Changes enter `main` only after Linux and Windows checks pass.

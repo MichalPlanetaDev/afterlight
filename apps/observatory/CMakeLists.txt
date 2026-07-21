@@ -10,21 +10,23 @@ target_link_libraries(
     afterlight_observatory
     PRIVATE
         Afterlight::Core
+        Afterlight::Platform
 )
 
 afterlight_configure_target(afterlight_observatory)
 
 if(BUILD_TESTING)
     add_test(
-        NAME afterlight.app.foundation
-        COMMAND afterlight_observatory
+        NAME afterlight.app.platform_smoke
+        COMMAND afterlight_observatory --smoke
     )
 
     set_tests_properties(
-        afterlight.app.foundation
+        afterlight.app.platform_smoke
         PROPERTIES
-            LABELS "integration;application"
+            LABELS "integration;application;platform"
             PASS_REGULAR_EXPRESSION
-                "Afterlight 0[.]0[.]0-dev [|] Milestone Zero [|] local"
+                "Afterlight 0[.]1[.]0-dev [|] platform=dummy [|] window=1280x720"
+            TIMEOUT 15
     )
 endif()
