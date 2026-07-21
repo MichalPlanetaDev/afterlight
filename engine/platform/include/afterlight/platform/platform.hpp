@@ -8,6 +8,8 @@ struct SDL_Window;
 namespace afterlight::platform
 {
 
+class VulkanSurfaceBridge;
+
 struct PlatformOptions final
 {
     std::string video_driver;
@@ -20,6 +22,7 @@ struct WindowConfig final
     int height{720};
     bool resizable{true};
     bool hidden{false};
+    bool vulkan{false};
 };
 
 enum class WindowConfigError
@@ -82,10 +85,13 @@ public:
     Window& operator=(Window&& other) noexcept;
 
     [[nodiscard]] WindowSize size() const;
+    [[nodiscard]] WindowSize pixel_size() const;
 
     [[nodiscard]] bool poll_event(PlatformEvent& event) const noexcept;
 
 private:
+    friend class VulkanSurfaceBridge;
+
     void destroy() noexcept;
 
     SDL_Window* window_{};

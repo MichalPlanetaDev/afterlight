@@ -36,6 +36,11 @@ namespace
         flags |= SDL_WINDOW_HIDDEN;
     }
 
+    if (config.vulkan)
+    {
+        flags |= SDL_WINDOW_VULKAN;
+    }
+
     return flags;
 }
 
@@ -151,6 +156,22 @@ WindowSize Window::size() const
     if (!SDL_GetWindowSize(window_, &width, &height))
     {
         throw sdl_failure("SDL_GetWindowSize");
+    }
+
+    return {
+        .width = width,
+        .height = height,
+    };
+}
+
+WindowSize Window::pixel_size() const
+{
+    int width = 0;
+    int height = 0;
+
+    if (!SDL_GetWindowSizeInPixels(window_, &width, &height))
+    {
+        throw sdl_failure("SDL_GetWindowSizeInPixels");
     }
 
     return {

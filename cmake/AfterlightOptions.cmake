@@ -16,6 +16,18 @@ option(
     OFF
 )
 
+if(WIN32)
+    set(AFTERLIGHT_VULKAN_RUNTIME_TESTS_DEFAULT OFF)
+else()
+    set(AFTERLIGHT_VULKAN_RUNTIME_TESTS_DEFAULT ON)
+endif()
+
+option(
+    AFTERLIGHT_ENABLE_VULKAN_RUNTIME_TESTS
+    "Run tests requiring Vulkan and a presentation surface"
+    ${AFTERLIGHT_VULKAN_RUNTIME_TESTS_DEFAULT}
+)
+
 function(afterlight_configure_project_analysis)
     if(NOT AFTERLIGHT_ENABLE_CLANG_TIDY)
         return()

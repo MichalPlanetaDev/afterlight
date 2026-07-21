@@ -40,10 +40,10 @@ run()
         printf '\n[FAIL] %s\n\n' "$name"
 
         grep -Ei \
-            'error:|fatal:|failed|failure|undefined reference|tests failed' \
+            'error:|fatal:|failed|failure|undefined reference|tests failed|validation error' \
             "$log" |
-            tail -n 30 ||
-            tail -n 30 "$log"
+            tail -n 40 ||
+            tail -n 40 "$log"
 
         printf '\nLog: %s\n' "$log"
         exit "$status"
@@ -55,10 +55,13 @@ run()
 test_preset()
 {
     local preset="$1"
-
-    ctest --preset "$preset"
-
     local count
+
+    xvfb-run \
+        -a \
+        -s "-screen 0 1280x720x24" \
+        ctest \
+        --preset "$preset"
 
     count="$(
         ctest \
@@ -71,13 +74,13 @@ print(len(json.load(sys.stdin).get("tests", [])))
 '
     )"
 
-    [[ "$count" == "5" ]] || {
-        echo "Expected 5 tests, found $count"
+    [[ "$count" == "7" ]] || {
+        echo "Expected 7 tests, found $count"
         return 1
     }
 }
 
-smoke()
+platform_smoke()
 {
     local output
     local expected
@@ -87,11 +90,32 @@ smoke()
             --smoke
     )"
 
-    expected="Afterlight 0.1.0-dev | platform=dummy | window=1280x720"
+    expected="Afterlight 0.2.0-dev | platform=dummy | window=1280x720"
 
     [[ "$output" == "$expected" ]] || {
         echo "Expected: $expected"
         echo "Actual:   $output"
+        return 1
+    }
+}
+
+vulkan_smoke()
+{
+    local output
+
+    output="$(
+        xvfb-run \
+            -a \
+            -s "-screen 0 1280x720x24" \
+            ./build/linux-clang-debug/apps/observatory/afterlight \
+            --vulkan-smoke
+    )"
+
+    [[ "$output" == \
+        Afterlight\ 0.2.0-dev\ \|\ backend=vulkan\ \|\ device=*\ \|\ api=*\ \|\ graphics_queue=*\ \|\ present_queue=*\ \|\ validation=on ]] ||
+    {
+        echo "Unexpected Vulkan smoke output:"
+        echo "$output"
         return 1
     }
 }
@@ -182,7 +206,12 @@ for preset in "${presets[@]}"; do
         run \
             "Platform smoke" \
             "$LOG_ROOT/platform-smoke.log" \
-            smoke
+            platform_smoke
+
+        run \
+            "Vulkan smoke" \
+            "$LOG_ROOT/vulkan-smoke.log" \
+            vulkan_smoke
     fi
 done
 

@@ -1,11 +1,13 @@
 #include <afterlight/core/application_lifecycle.hpp>
 #include <afterlight/core/build_info.hpp>
+#include <afterlight/graphics/vulkan/vulkan_context.hpp>
 #include <afterlight/platform/platform.hpp>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -14,9 +16,16 @@
 namespace
 {
 
+enum class RunMode : std::uint8_t
+{
+    desktop,
+    platform_smoke,
+    vulkan_smoke,
+};
+
 struct RunOptions final
 {
-    bool smoke_test{};
+    RunMode mode{RunMode::desktop};
 };
 
 [[nodiscard]] RunOptions parse_options(int argc, char* argv[])
@@ -29,7 +38,13 @@ struct RunOptions final
 
         if (argument == "--smoke")
         {
-            options.smoke_test = true;
+            options.mode = RunMode::platform_smoke;
+            continue;
+        }
+
+        if (argument == "--vulkan-smoke")
+        {
+            options.mode = RunMode::vulkan_smoke;
             continue;
         }
 
@@ -48,15 +63,41 @@ void require_transition(const afterlight::core::LifecycleTransitionResult& resul
     }
 }
 
+void print_platform_smoke(const afterlight::core::BuildInfo& build,
+                          const afterlight::platform::PlatformContext& platform,
+                          const afterlight::platform::Window& window)
+{
+    const afterlight::platform::WindowSize size = window.size();
+
+    std::cout << build.product_name << ' ' << build.semantic_version
+              << " | platform=" << platform.video_driver() << " | window=" << size.width << 'x'
+              << size.height << '\n';
+}
+
+void print_vulkan_device(const afterlight::core::BuildInfo& build,
+                         const afterlight::graphics::vulkan::VulkanDeviceInfo& device)
+{
+    std::cout << build.product_name << ' ' << build.semantic_version << " | backend=vulkan"
+              << " | device=" << device.name
+              << " | api=" << afterlight::graphics::vulkan::format_api_version(device.api_version)
+              << " | graphics_queue=" << device.graphics_queue_family
+              << " | present_queue=" << device.present_queue_family
+              << " | validation=" << (device.validation_enabled ? "on" : "off") << '\n';
+}
+
 int run(const RunOptions& options)
 {
     afterlight::core::ApplicationLifecycle lifecycle;
 
     require_transition(lifecycle.initialize(), "initialize");
 
+    const bool platform_smoke = options.mode == RunMode::platform_smoke;
+
+    const bool finite_run = options.mode != RunMode::desktop;
+
     afterlight::platform::PlatformOptions platform_options;
 
-    if (options.smoke_test)
+    if (platform_smoke)
     {
         platform_options.video_driver = "dummy";
     }
@@ -68,22 +109,34 @@ int run(const RunOptions& options)
         .width = 1280,
         .height = 720,
         .resizable = true,
-        .hidden = options.smoke_test,
+        .hidden = finite_run,
+        .vulkan = !platform_smoke,
     }};
+
+    std::unique_ptr<afterlight::graphics::vulkan::VulkanContext> vulkan;
+
+    if (!platform_smoke)
+    {
+        vulkan = std::make_unique<afterlight::graphics::vulkan::VulkanContext>(window);
+    }
 
     require_transition(lifecycle.start(), "start");
 
     const afterlight::core::BuildInfo build = afterlight::core::current_build_info();
 
-    const afterlight::platform::WindowSize initial_size = window.size();
-
-    std::cout << build.product_name << ' ' << build.semantic_version
-              << " | platform=" << platform.video_driver() << " | window=" << initial_size.width
-              << 'x' << initial_size.height << '\n';
+    if (platform_smoke)
+    {
+        print_platform_smoke(build, platform, window);
+    }
+    else
+    {
+        print_vulkan_device(build, vulkan->device_info());
+    }
 
     bool running = true;
     std::uint32_t frame_count = 0;
-    const std::uint32_t frame_limit = options.smoke_test ? 2U : 0U;
+
+    const std::uint32_t frame_limit = finite_run ? 2U : 0U;
 
     while (running)
     {
@@ -111,6 +164,8 @@ int run(const RunOptions& options)
     }
 
     require_transition(lifecycle.request_stop(), "request stop");
+
+    vulkan.reset();
 
     require_transition(lifecycle.shutdown(), "shutdown");
 

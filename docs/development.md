@@ -1,43 +1,12 @@
 # Development
 
-Afterlight uses a pinned vcpkg manifest, CMake presets and mandatory
-pull-request validation.
-
-Linux setup:
+Linux setup and the complete local validation matrix use repository-owned scripts:
 
 ```bash
 ./scripts/install-linux-prerequisites.sh
-./scripts/bootstrap-vcpkg.sh
+./scripts/validate.sh all
 ```
 
-Windows setup:
+Runtime Vulkan tests execute through Xvfb with Mesa's software Vulkan implementation, making device and presentation-surface validation reproducible without a physical display. Windows CI compiles the complete Vulkan backend and runs hardware-independent tests without assuming a GPU is available on the runner.
 
-```powershell
-./scripts/bootstrap-vcpkg.ps1
-```
-
-The normal Linux validation matrix is:
-
-```bash
-cmake --preset linux-clang-debug
-cmake --build --preset linux-clang-debug
-ctest --preset linux-clang-debug
-
-cmake --preset linux-clang-sanitize
-cmake --build --preset linux-clang-sanitize
-ctest --preset linux-clang-sanitize
-
-cmake --preset linux-clang-analysis
-cmake --build --preset linux-clang-analysis
-
-cmake --preset linux-gcc-debug
-cmake --build --preset linux-gcc-debug
-ctest --preset linux-gcc-debug
-```
-
-Normal execution creates the native resizable window. `--smoke` selects
-SDL's dummy video backend and exercises initialization, window creation,
-event polling and shutdown without a display server.
-
-Project-owned code is formatted before commit and compiled with warnings as
-errors. Changes enter `main` only after Linux and Windows checks pass.
+Full dependency, compiler, static-analysis and test output is retained under `out/logs/`; the terminal shows only phase status and failure diagnostics.
