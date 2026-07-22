@@ -2,18 +2,20 @@
 
 Afterlight separates application policy, platform integration, deterministic scene construction, backend-independent rendering contracts, shader compilation and Vulkan execution.
 
-    deterministic mesh
+    scene frame data
         |
-        +--- position
-        +--- flat surface normal
-        +--- spectral base color
+        +--- frame slot zero uniform buffer
+        +--- frame slot one uniform buffer
                 |
-                +--- indexed GPU buffers
-                +--- depth-tested pipeline
-                +--- directional lighting
+                +--- descriptor pool
+                +--- descriptor sets
+                +--- pipeline layout set zero
+                        |
+                        +--- vertex shader
+                        +--- fragment shader
 
-The aperture uses unique vertices for each logical surface. This increases the mesh from twenty-four shared vertices to ninety-six face vertices while preserving forty-eight indexed triangles. Front, rear, exterior and interior surfaces therefore carry physically meaningful flat normals without smoothing across hard mechanical edges.
+The scene-uniform subsystem owns a descriptor-set layout, descriptor pool, one persistently mapped uniform buffer per frame in flight and one descriptor set per buffer. The subsystem survives swapchain recreation because its data shape is independent of surface extent and attachment formats.
 
-The scene frame block contains the model-view-projection transform, an object-space light direction with intensity and an object-space view direction with exposure. Its total size is ninety-six bytes, remaining within Vulkan's guaranteed minimum push-constant capacity. The range is visible to both vertex and fragment shader stages.
+The renderer waits for a frame slot's fence before writing its uniform allocation. Coherent memory requires no additional operation. A non-coherent fallback issues a mapped-memory flush before command submission.
 
-The fragment stage operates in linear color. It combines hemispherical ambient response, Lambertian diffuse illumination, a compact specular lobe and a low-energy rim term before applying exponential exposure mapping. The sRGB swapchain performs the final transfer conversion.
+The graphics pipeline consumes the uniform descriptor layout instead of declaring a large push-constant range. This leaves push constants available for future draw-local data while establishing the descriptor infrastructure required by material textures, samplers and larger scene resources.

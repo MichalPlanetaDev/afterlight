@@ -8,7 +8,7 @@ struct SceneFrameData
     float4 view_direction_exposure;
 };
 
-[[vk::push_constant]]
+[[vk::binding(0, 0)]]
 ConstantBuffer<SceneFrameData> frame_data;
 
 struct VertexInput

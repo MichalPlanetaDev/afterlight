@@ -74,8 +74,8 @@ print(len(json.load(sys.stdin).get("tests", [])))
 '
     )"
 
-    [[ "$count" == "16" ]] || {
-        echo "Expected 16 tests, found $count"
+    [[ "$count" == "17" ]] || {
+        echo "Expected 17 tests, found $count"
         return 1
     }
 }
@@ -90,7 +90,7 @@ platform_smoke()
             --smoke
     )"
 
-    expected="Afterlight 0.8.0-dev | platform=dummy | window=1280x720"
+    expected="Afterlight 0.9.0-dev | platform=dummy | window=1280x720"
 
     [[ "$output" == "$expected" ]] || {
         echo "Expected: $expected"
@@ -122,7 +122,7 @@ output = os.environ[
 ].strip()
 
 pattern = re.compile(
-    r"Afterlight 0[.]8[.]0-dev"
+    r"Afterlight 0[.]9[.]0-dev"
     r" [|] backend=vulkan"
     r" [|] device=.+"
     r" [|] presented=3"
@@ -135,6 +135,8 @@ pattern = re.compile(
     r" [|] indices=144"
     r" [|] normals=96"
     r" [|] lighting=directional"
+    r" [|] uniforms=descriptor-set"
+    r" [|] uniform-frames=2"
     r" [|] validation=on"
 )
 

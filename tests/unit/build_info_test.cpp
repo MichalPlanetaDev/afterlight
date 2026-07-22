@@ -38,9 +38,9 @@ int main()
 
     test.expect(info.product_name == "Afterlight", "product name is stable");
 
-    test.expect(info.semantic_version == "0.8.0-dev", "surface-lighting version is explicit");
+    test.expect(info.semantic_version == "0.9.0-dev", "descriptor-uniform version is explicit");
 
-    test.expect(info.milestone == "Surface Normals and Directional Lighting",
+    test.expect(info.milestone == "Descriptor-Backed Scene Uniforms",
                 "current milestone is reported");
 
     test.expect(info.revision == "local", "unreleased revision is not fabricated");

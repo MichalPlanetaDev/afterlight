@@ -9,6 +9,6 @@ Interactive WSLg preview:
 
     ./build/linux-clang-debug/apps/observatory/afterlight
 
-The native window renders the rotating observatory aperture with depth-correct occlusion and directional surface lighting. The spectral panels react continuously as their local normals rotate relative to the fixed world-space light.
+The native window renders the depth-tested, directionally lit observatory aperture while updating descriptor-backed scene data independently for each frame in flight.
 
-Validation builds with Clang, GCC and MSVC, executes sanitizer and static-analysis configurations, verifies sixteen tests and submits three validation-clean lit frames through Mesa Vulkan.
+Validation builds with Clang, GCC and MSVC, executes sanitizer and static-analysis configurations, verifies seventeen tests and submits three validation-clean frames using Vulkan uniform buffers and descriptor sets.
