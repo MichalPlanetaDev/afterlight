@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.28)
 
 project(
     Afterlight
-    VERSION 0.8.0
+    VERSION 0.9.0
     DESCRIPTION "Native renderer and interactive visual experience"
     LANGUAGES CXX
 )

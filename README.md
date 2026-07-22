@@ -4,9 +4,9 @@
 
 Afterlight is a native C++23 renderer developed around **The Last Observatory**, an interactive visual experience set inside a damaged orbital observatory reconstructing light from a vanished star.
 
-The observatory aperture now carries explicit flat-shaded surface normals. Separate vertices preserve the front, rear, exterior and interior face directions required for stable lighting across the extruded structure.
+The renderer maintains one persistently mapped scene uniform buffer for each frame in flight. A descriptor set at set zero and binding zero exposes the model-view-projection transform, directional-light parameters and camera-dependent exposure data to both HLSL shader stages.
 
-A world-space directional key light and view direction are transformed into object space for each frame, packed with the model-view-projection matrix and delivered through a 96-byte Vulkan push-constant block visible to both shader stages. The HLSL fragment stage combines hemispherical ambient light, Lambertian diffuse response, restrained specular reflection, rim lighting and exposure mapping.
+The memory policy prefers host-visible coherent memory and falls back to explicit non-coherent flushing when required. Each frame slot waits for its fence before the CPU updates its corresponding allocation, preventing writes from racing GPU reads.
 
 Build and validate:
 

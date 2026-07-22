@@ -8,6 +8,7 @@ add_library(
         src/depth_target.cpp
         src/gpu_mesh.cpp
         src/mesh_pipeline.cpp
+        src/scene_uniforms.cpp
         src/swapchain.cpp
         src/vulkan_context.cpp
 )

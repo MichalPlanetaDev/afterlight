@@ -2,6 +2,7 @@
 #include <afterlight/graphics/vulkan/depth_target.hpp>
 #include <afterlight/graphics/vulkan/gpu_mesh.hpp>
 #include <afterlight/graphics/vulkan/mesh_pipeline.hpp>
+#include <afterlight/graphics/vulkan/scene_uniforms.hpp>
 #include <afterlight/graphics/vulkan/swapchain.hpp>
 #include <afterlight/scene/camera.hpp>
 #include <afterlight/scene/mesh.hpp>
@@ -228,6 +229,9 @@ SwapchainRenderer::SwapchainRenderer(VulkanContext& context,
         create_command_resources();
         create_frame_resources();
 
+        scene_uniforms_ =
+            std::make_unique<SceneUniforms>(context_, static_cast<std::uint32_t>(frames_in_flight));
+
         gpu_mesh_ = std::make_unique<GpuMesh>(context_, scene::make_observatory_aperture());
 
         if (!recreate_swapchain(window))
@@ -239,8 +243,10 @@ SwapchainRenderer::SwapchainRenderer(VulkanContext& context,
     {
         destroy_swapchain();
         gpu_mesh_.reset();
+        scene_uniforms_.reset();
         destroy_frame_resources();
         destroy_command_resources();
+
         throw;
     }
 }
@@ -254,6 +260,7 @@ SwapchainRenderer::~SwapchainRenderer()
 
     destroy_swapchain();
     gpu_mesh_.reset();
+    scene_uniforms_.reset();
     destroy_frame_resources();
     destroy_command_resources();
 }
@@ -320,7 +327,11 @@ bool SwapchainRenderer::render_frame(const platform::Window& window)
 
     require_success(vkResetCommandBuffer(frame.command_buffer, 0), "vkResetCommandBuffer");
 
-    record_commands(frame.command_buffer, image_index);
+    record_commands({
+        .command_buffer = frame.command_buffer,
+        .image_index = image_index,
+        .frame_slot = frame_slot,
+    });
 
     submit_frame(frame, image_index);
 
@@ -368,6 +379,19 @@ GeometryInfo SwapchainRenderer::geometry_info() const noexcept
         .vertex_count = gpu_mesh_->vertex_count(),
         .index_count = gpu_mesh_->index_count(),
         .normal_count = gpu_mesh_->vertex_count(),
+    };
+}
+
+SceneBindingInfo SwapchainRenderer::scene_binding_info() const noexcept
+{
+    if (scene_uniforms_ == nullptr)
+    {
+        return {};
+    }
+
+    return {
+        .frame_count = scene_uniforms_->frame_count(),
+        .descriptor_backed = true,
     };
 }
 
@@ -566,11 +590,17 @@ bool SwapchainRenderer::create_swapchain(const platform::Window& window)
 
     info_.depth_format = depth_target_->format();
 
+    if (scene_uniforms_ == nullptr)
+    {
+        throw std::runtime_error{"scene uniform resources are unavailable"};
+    }
+
     mesh_pipeline_ = std::make_unique<MeshPipeline>(context_.device(),
                                                     MeshPipelineFormats{
                                                         .color = info_.format,
                                                         .depth = info_.depth_format,
                                                     },
+                                                    scene_uniforms_->descriptor_set_layout(),
                                                     shader_directory_);
 
     return true;
@@ -762,9 +792,16 @@ void SwapchainRenderer::wait_for_image(std::uint32_t image_index, VkFence frame_
     image_fences_[resource_index] = frame_fence;
 }
 
-void SwapchainRenderer::record_commands(VkCommandBuffer command_buffer, std::uint32_t image_index)
+void SwapchainRenderer::record_commands(RecordFrameParameters parameters)
 {
-    const std::size_t resource_index = static_cast<std::size_t>(image_index);
+    const VkCommandBuffer command_buffer = parameters.command_buffer;
+
+    const std::size_t resource_index = static_cast<std::size_t>(parameters.image_index);
+
+    if (command_buffer == VK_NULL_HANDLE)
+    {
+        throw std::invalid_argument{"swapchain recording requires a command buffer"};
+    }
 
     if (resource_index >= images_.size() || resource_index >= image_views_.size() ||
         resource_index >= image_resources_.size())
@@ -772,9 +809,15 @@ void SwapchainRenderer::record_commands(VkCommandBuffer command_buffer, std::uin
         throw std::runtime_error{"swapchain recording index is invalid"};
     }
 
-    if (mesh_pipeline_ == nullptr || gpu_mesh_ == nullptr || depth_target_ == nullptr)
+    if (mesh_pipeline_ == nullptr || gpu_mesh_ == nullptr || depth_target_ == nullptr ||
+        scene_uniforms_ == nullptr)
     {
-        throw std::runtime_error{"depth-buffered rendering resources are unavailable"};
+        throw std::runtime_error{"descriptor-backed rendering resources are unavailable"};
+    }
+
+    if (parameters.frame_slot >= scene_uniforms_->frame_count())
+    {
+        throw std::runtime_error{"scene uniform frame slot is invalid"};
     }
 
     VkCommandBufferBeginInfo begin_info{};
@@ -836,6 +879,18 @@ void SwapchainRenderer::record_commands(VkCommandBuffer command_buffer, std::uin
 
     depth_attachment.clearValue.depthStencil.stencil = 0;
 
+    const float aspect_ratio = static_cast<float>(info_.width) / static_cast<float>(info_.height);
+
+    const float elapsed_seconds =
+        std::chrono::duration<float>(std::chrono::steady_clock::now() - animation_start_).count();
+
+    const scene::SceneFrameData frame_data = scene::make_observatory_frame({
+        .aspect_ratio = aspect_ratio,
+        .rotation_radians = elapsed_seconds * 0.34F,
+    });
+
+    scene_uniforms_->update(parameters.frame_slot, frame_data);
+
     VkRenderingInfo rendering_info{};
 
     rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
@@ -863,22 +918,12 @@ void SwapchainRenderer::record_commands(VkCommandBuffer command_buffer, std::uin
 
     vkCmdBeginRendering(command_buffer, &rendering_info);
 
-    const float aspect_ratio = static_cast<float>(info_.width) / static_cast<float>(info_.height);
-
-    const float elapsed_seconds =
-        std::chrono::duration<float>(std::chrono::steady_clock::now() - animation_start_).count();
-
-    const scene::SceneFrameData frame_data = scene::make_observatory_frame({
-        .aspect_ratio = aspect_ratio,
-        .rotation_radians = elapsed_seconds * 0.34F,
-    });
-
     mesh_pipeline_->record(command_buffer,
                            {
                                .width = info_.width,
                                .height = info_.height,
                            },
-                           frame_data,
+                           scene_uniforms_->descriptor_set(parameters.frame_slot),
                            *gpu_mesh_);
 
     vkCmdEndRendering(command_buffer);

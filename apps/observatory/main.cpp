@@ -95,6 +95,7 @@ void print_frame_smoke(const afterlight::core::BuildInfo& build,
                        const afterlight::graphics::vulkan::VulkanDeviceInfo& device,
                        const afterlight::graphics::vulkan::SwapchainInfo& swapchain,
                        const afterlight::graphics::vulkan::GeometryInfo& geometry,
+                       const afterlight::graphics::vulkan::SceneBindingInfo& bindings,
                        std::uint32_t presented_frames)
 {
     std::cout << build.product_name << ' ' << build.semantic_version << " | backend=vulkan";
@@ -120,6 +121,10 @@ void print_frame_smoke(const afterlight::core::BuildInfo& build,
     std::cout << " | normals=" << geometry.normal_count;
 
     std::cout << " | lighting=directional";
+
+    std::cout << " | uniforms=" << (bindings.descriptor_backed ? "descriptor-set" : "unavailable");
+
+    std::cout << " | uniform-frames=" << bindings.frame_count;
 
     std::cout << " | validation=" << (device.validation_enabled ? "on" : "off") << '\n';
 }
@@ -258,6 +263,7 @@ int run_vulkan(afterlight::core::ApplicationLifecycle& lifecycle, bool smoke)
                               vulkan.device_info(),
                               renderer.info(),
                               renderer.geometry_info(),
+                              renderer.scene_binding_info(),
                               result.presented_frames);
         }
 

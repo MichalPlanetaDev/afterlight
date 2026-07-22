@@ -21,6 +21,7 @@ namespace afterlight::graphics::vulkan
 class DepthTarget;
 class GpuMesh;
 class MeshPipeline;
+class SceneUniforms;
 
 struct SwapchainInfo final
 {
@@ -37,6 +38,12 @@ struct GeometryInfo final
     std::uint32_t vertex_count{};
     std::uint32_t index_count{};
     std::uint32_t normal_count{};
+};
+
+struct SceneBindingInfo final
+{
+    std::uint32_t frame_count{};
+    bool descriptor_backed{};
 };
 
 [[nodiscard]] VkSurfaceFormatKHR choose_surface_format(std::span<const VkSurfaceFormatKHR> formats);
@@ -71,16 +78,23 @@ public:
 
     [[nodiscard]] GeometryInfo geometry_info() const noexcept;
 
+    [[nodiscard]] SceneBindingInfo scene_binding_info() const noexcept;
+
 private:
     static constexpr std::size_t frames_in_flight = 2;
 
     struct FrameResources final
     {
         VkCommandBuffer command_buffer{VK_NULL_HANDLE};
-
         VkSemaphore image_available{VK_NULL_HANDLE};
-
         VkFence render_fence{VK_NULL_HANDLE};
+    };
+
+    struct RecordFrameParameters final
+    {
+        VkCommandBuffer command_buffer{VK_NULL_HANDLE};
+        std::uint32_t image_index{};
+        std::uint32_t frame_slot{};
     };
 
     void create_command_resources();
@@ -100,7 +114,7 @@ private:
 
     void wait_for_image(std::uint32_t image_index, VkFence frame_fence);
 
-    void record_commands(VkCommandBuffer command_buffer, std::uint32_t image_index);
+    void record_commands(RecordFrameParameters parameters);
 
     void submit_frame(const FrameResources& frame, std::uint32_t image_index);
 
@@ -122,6 +136,7 @@ private:
     std::vector<VkFence> image_fences_;
     std::vector<rhi::TextureHandle> image_resources_;
 
+    std::unique_ptr<SceneUniforms> scene_uniforms_;
     std::unique_ptr<DepthTarget> depth_target_;
     std::unique_ptr<GpuMesh> gpu_mesh_;
     std::unique_ptr<MeshPipeline> mesh_pipeline_;

@@ -129,3 +129,29 @@ set_tests_properties(
     PROPERTIES
         LABELS "unit;graphics;vulkan;depth"
 )
+
+add_executable(
+    afterlight_vulkan_scene_uniform_tests
+    scene_uniforms_test.cpp
+)
+
+target_link_libraries(
+    afterlight_vulkan_scene_uniform_tests
+    PRIVATE
+        Afterlight::Vulkan
+)
+
+afterlight_configure_target(
+    afterlight_vulkan_scene_uniform_tests
+)
+
+add_test(
+    NAME afterlight.vulkan.scene_uniforms
+    COMMAND afterlight_vulkan_scene_uniform_tests
+)
+
+set_tests_properties(
+    afterlight.vulkan.scene_uniforms
+    PROPERTIES
+        LABELS "unit;graphics;vulkan;descriptor;uniform"
+)

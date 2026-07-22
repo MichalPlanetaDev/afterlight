@@ -112,6 +112,7 @@ void require_success(VkResult result, std::string_view operation)
 
 MeshPipeline::MeshPipeline(VkDevice device,
                            MeshPipelineFormats formats,
+                           VkDescriptorSetLayout scene_set_layout,
                            const std::filesystem::path& shader_directory)
     : device_{device}
 {
@@ -120,9 +121,14 @@ MeshPipeline::MeshPipeline(VkDevice device,
         throw std::invalid_argument{"mesh pipeline requires a Vulkan device"};
     }
 
+    if (scene_set_layout == VK_NULL_HANDLE)
+    {
+        throw std::invalid_argument{"mesh pipeline requires a scene descriptor layout"};
+    }
+
     try
     {
-        create_pipeline_layout();
+        create_pipeline_layout(scene_set_layout);
 
         create_graphics_pipeline(formats, shader_directory);
     }
@@ -140,12 +146,17 @@ MeshPipeline::~MeshPipeline()
 
 void MeshPipeline::record(VkCommandBuffer command_buffer,
                           VkExtent2D extent,
-                          const scene::SceneFrameData& frame_data,
+                          VkDescriptorSet scene_descriptor_set,
                           const GpuMesh& mesh) const
 {
     if (command_buffer == VK_NULL_HANDLE || pipeline_ == VK_NULL_HANDLE)
     {
         throw std::logic_error{"mesh pipeline is not recordable"};
+    }
+
+    if (scene_descriptor_set == VK_NULL_HANDLE)
+    {
+        throw std::invalid_argument{"mesh pipeline requires a scene descriptor set"};
     }
 
     VkViewport viewport{};
@@ -175,33 +186,27 @@ void MeshPipeline::record(VkCommandBuffer command_buffer,
 
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
 
-    vkCmdPushConstants(command_buffer,
-                       pipeline_layout_,
-                       VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                       0,
-                       static_cast<std::uint32_t>(sizeof(scene::SceneFrameData)),
-                       &frame_data);
+    vkCmdBindDescriptorSets(command_buffer,
+                            VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            pipeline_layout_,
+                            0,
+                            1,
+                            &scene_descriptor_set,
+                            0,
+                            nullptr);
 
     mesh.record(command_buffer);
 }
 
-void MeshPipeline::create_pipeline_layout()
+void MeshPipeline::create_pipeline_layout(VkDescriptorSetLayout scene_set_layout)
 {
-    VkPushConstantRange push_constant{};
-
-    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    push_constant.offset = 0;
-
-    push_constant.size = static_cast<std::uint32_t>(sizeof(scene::SceneFrameData));
-
     VkPipelineLayoutCreateInfo create_info{};
 
     create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
-    create_info.pushConstantRangeCount = 1;
+    create_info.setLayoutCount = 1;
 
-    create_info.pPushConstantRanges = &push_constant;
+    create_info.pSetLayouts = &scene_set_layout;
 
     require_success(vkCreatePipelineLayout(device_, &create_info, nullptr, &pipeline_layout_),
                     "vkCreatePipelineLayout");
