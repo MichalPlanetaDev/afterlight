@@ -9,11 +9,17 @@ namespace afterlight::graphics::vulkan
 
 class GpuMesh;
 
+struct MeshPipelineFormats final
+{
+    VkFormat color{VK_FORMAT_UNDEFINED};
+    VkFormat depth{VK_FORMAT_UNDEFINED};
+};
+
 class MeshPipeline final
 {
 public:
     MeshPipeline(VkDevice device,
-                 VkFormat color_format,
+                 MeshPipelineFormats formats,
                  const std::filesystem::path& shader_directory);
 
     ~MeshPipeline();
@@ -31,7 +37,7 @@ public:
 private:
     void create_pipeline_layout();
 
-    void create_graphics_pipeline(VkFormat color_format,
+    void create_graphics_pipeline(MeshPipelineFormats formats,
                                   const std::filesystem::path& shader_directory);
 
     void reset() noexcept;

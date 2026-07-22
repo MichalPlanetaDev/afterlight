@@ -74,8 +74,8 @@ print(len(json.load(sys.stdin).get("tests", [])))
 '
     )"
 
-    [[ "$count" == "14" ]] || {
-        echo "Expected 14 tests, found $count"
+    [[ "$count" == "15" ]] || {
+        echo "Expected 15 tests, found $count"
         return 1
     }
 }
@@ -90,7 +90,7 @@ platform_smoke()
             --smoke
     )"
 
-    expected="Afterlight 0.6.0-dev | platform=dummy | window=1280x720"
+    expected="Afterlight 0.7.0-dev | platform=dummy | window=1280x720"
 
     [[ "$output" == "$expected" ]] || {
         echo "Expected: $expected"
@@ -111,14 +111,36 @@ vulkan_smoke()
             --vulkan-smoke
     )"
 
-    if ! grep -Eq \
-        '^Afterlight 0[.]6[.]0-dev [|] backend=vulkan [|] device=.+ [|] presented=3 [|] extent=[0-9]+x[0-9]+ [|] images=[0-9]+ [|] format=[0-9]+ [|] geometry=observatory-aperture [|] vertices=12 [|] indices=36 [|] validation=on$' \
-        <<<"$output"
-    then
-        echo "Unexpected Vulkan smoke output:"
-        echo "$output"
-        return 1
-    fi
+    AFTERLIGHT_VULKAN_SMOKE_OUTPUT="$output" \
+        python3 - <<'PYTHON'
+import os
+import re
+import sys
+
+output = os.environ[
+    "AFTERLIGHT_VULKAN_SMOKE_OUTPUT"
+].strip()
+
+pattern = re.compile(
+    r"Afterlight 0[.]7[.]0-dev"
+    r" [|] backend=vulkan"
+    r" [|] device=.+"
+    r" [|] presented=3"
+    r" [|] extent=[0-9]+x[0-9]+"
+    r" [|] images=[0-9]+"
+    r" [|] format=[0-9]+"
+    r" [|] depth=[0-9]+"
+    r" [|] geometry=extruded-observatory-aperture"
+    r" [|] vertices=24"
+    r" [|] indices=144"
+    r" [|] validation=on"
+)
+
+if pattern.fullmatch(output) is None:
+    print("Unexpected Vulkan smoke output:")
+    print(repr(output))
+    sys.exit(1)
+PYTHON
 }
 
 printf '\nAfterlight Validation\n\n'

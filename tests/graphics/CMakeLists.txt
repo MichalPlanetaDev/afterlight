@@ -103,3 +103,29 @@ set_tests_properties(
     PROPERTIES
         LABELS "unit;graphics;shader;hlsl;spirv"
 )
+
+add_executable(
+    afterlight_vulkan_depth_format_tests
+    depth_format_test.cpp
+)
+
+target_link_libraries(
+    afterlight_vulkan_depth_format_tests
+    PRIVATE
+        Afterlight::Vulkan
+)
+
+afterlight_configure_target(
+    afterlight_vulkan_depth_format_tests
+)
+
+add_test(
+    NAME afterlight.vulkan.depth_format
+    COMMAND afterlight_vulkan_depth_format_tests
+)
+
+set_tests_properties(
+    afterlight.vulkan.depth_format
+    PROPERTIES
+        LABELS "unit;graphics;vulkan;depth"
+)

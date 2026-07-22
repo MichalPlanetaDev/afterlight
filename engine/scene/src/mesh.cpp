@@ -10,6 +10,8 @@ namespace
 {
 
 constexpr std::size_t aperture_segment_count = 6;
+constexpr float front_depth = 0.18F;
+constexpr float back_depth = -0.18F;
 
 constexpr std::array<std::array<float, 2>, aperture_segment_count> outer_positions{{
     {1.0F, 0.0F},
@@ -38,13 +40,36 @@ constexpr std::array<std::array<float, 3>, aperture_segment_count> segment_color
     {0.91F, 0.16F, 0.72F},
 }};
 
-[[nodiscard]] std::array<float, 3> inner_color(const std::array<float, 3>& color) noexcept
+[[nodiscard]] std::array<float, 3>
+scaled_color(const std::array<float, 3>& color, float scale, float offset) noexcept
 {
     return {
-        color[0] * 0.32F + 0.04F,
-        color[1] * 0.32F + 0.04F,
-        color[2] * 0.32F + 0.06F,
+        color[0] * scale + offset,
+        color[1] * scale + offset,
+        color[2] * scale + offset,
     };
+}
+
+[[nodiscard]] std::uint16_t vertex_index(std::uint16_t segment, std::uint16_t component) noexcept
+{
+    return static_cast<std::uint16_t>(segment * 4U + component);
+}
+
+void append_quad(std::vector<std::uint16_t>& indices,
+                 std::uint16_t first,
+                 std::uint16_t second,
+                 std::uint16_t third,
+                 std::uint16_t fourth)
+{
+    indices.insert(indices.end(),
+                   {
+                       first,
+                       second,
+                       third,
+                       first,
+                       third,
+                       fourth,
+                   });
 }
 
 } // namespace
@@ -53,23 +78,24 @@ MeshData make_observatory_aperture()
 {
     MeshData mesh;
 
-    mesh.vertices.reserve(aperture_segment_count * 2);
-    mesh.indices.reserve(aperture_segment_count * 6);
+    mesh.vertices.reserve(aperture_segment_count * 4);
+
+    mesh.indices.reserve(aperture_segment_count * 24);
 
     for (std::size_t segment = 0; segment < aperture_segment_count; ++segment)
     {
-        const std::array<float, 2>& outer = outer_positions[segment];
+        const auto& outer = outer_positions[segment];
 
-        const std::array<float, 2>& inner = inner_positions[segment];
+        const auto& inner = inner_positions[segment];
 
-        const std::array<float, 3>& color = segment_colors[segment];
+        const auto& color = segment_colors[segment];
 
         mesh.vertices.push_back({
             .position =
                 {
                     outer[0],
                     outer[1],
-                    0.0F,
+                    front_depth,
                 },
             .color = color,
         });
@@ -79,9 +105,29 @@ MeshData make_observatory_aperture()
                 {
                     inner[0],
                     inner[1],
-                    0.0F,
+                    front_depth,
                 },
-            .color = inner_color(color),
+            .color = scaled_color(color, 0.42F, 0.035F),
+        });
+
+        mesh.vertices.push_back({
+            .position =
+                {
+                    outer[0],
+                    outer[1],
+                    back_depth,
+                },
+            .color = scaled_color(color, 0.22F, 0.018F),
+        });
+
+        mesh.vertices.push_back({
+            .position =
+                {
+                    inner[0],
+                    inner[1],
+                    back_depth,
+                },
+            .color = scaled_color(color, 0.13F, 0.012F),
         });
     }
 
@@ -91,23 +137,29 @@ MeshData make_observatory_aperture()
         const std::uint16_t next =
             static_cast<std::uint16_t>((segment + 1U) % aperture_segment_count);
 
-        const std::uint16_t outer_current = static_cast<std::uint16_t>(segment * 2U);
+        const std::uint16_t outer_front = vertex_index(segment, 0);
 
-        const std::uint16_t inner_current = static_cast<std::uint16_t>(outer_current + 1U);
+        const std::uint16_t inner_front = vertex_index(segment, 1);
 
-        const std::uint16_t outer_next = static_cast<std::uint16_t>(next * 2U);
+        const std::uint16_t outer_back = vertex_index(segment, 2);
 
-        const std::uint16_t inner_next = static_cast<std::uint16_t>(outer_next + 1U);
+        const std::uint16_t inner_back = vertex_index(segment, 3);
 
-        mesh.indices.insert(mesh.indices.end(),
-                            {
-                                outer_current,
-                                outer_next,
-                                inner_next,
-                                outer_current,
-                                inner_next,
-                                inner_current,
-                            });
+        const std::uint16_t next_outer_front = vertex_index(next, 0);
+
+        const std::uint16_t next_inner_front = vertex_index(next, 1);
+
+        const std::uint16_t next_outer_back = vertex_index(next, 2);
+
+        const std::uint16_t next_inner_back = vertex_index(next, 3);
+
+        append_quad(mesh.indices, outer_front, next_outer_front, next_inner_front, inner_front);
+
+        append_quad(mesh.indices, outer_back, inner_back, next_inner_back, next_outer_back);
+
+        append_quad(mesh.indices, outer_front, outer_back, next_outer_back, next_outer_front);
+
+        append_quad(mesh.indices, inner_front, next_inner_front, next_inner_back, inner_back);
     }
 
     return mesh;

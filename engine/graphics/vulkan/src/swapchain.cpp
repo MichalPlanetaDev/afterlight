@@ -1,4 +1,5 @@
 #include <afterlight/graphics/vulkan/barrier.hpp>
+#include <afterlight/graphics/vulkan/depth_target.hpp>
 #include <afterlight/graphics/vulkan/gpu_mesh.hpp>
 #include <afterlight/graphics/vulkan/mesh_pipeline.hpp>
 #include <afterlight/graphics/vulkan/swapchain.hpp>
@@ -560,8 +561,16 @@ bool SwapchainRenderer::create_swapchain(const platform::Window& window)
     create_image_resources();
     create_render_finished_semaphores();
 
-    mesh_pipeline_ =
-        std::make_unique<MeshPipeline>(context_.device(), info_.format, shader_directory_);
+    depth_target_ = std::make_unique<DepthTarget>(context_, extent);
+
+    info_.depth_format = depth_target_->format();
+
+    mesh_pipeline_ = std::make_unique<MeshPipeline>(context_.device(),
+                                                    MeshPipelineFormats{
+                                                        .color = info_.format,
+                                                        .depth = info_.depth_format,
+                                                    },
+                                                    shader_directory_);
 
     return true;
 }
@@ -650,6 +659,7 @@ void SwapchainRenderer::create_render_finished_semaphores()
 void SwapchainRenderer::destroy_swapchain() noexcept
 {
     mesh_pipeline_.reset();
+    depth_target_.reset();
 
     for (const VkSemaphore semaphore : render_finished_)
     {
@@ -761,9 +771,9 @@ void SwapchainRenderer::record_commands(VkCommandBuffer command_buffer, std::uin
         throw std::runtime_error{"swapchain recording index is invalid"};
     }
 
-    if (mesh_pipeline_ == nullptr || gpu_mesh_ == nullptr)
+    if (mesh_pipeline_ == nullptr || gpu_mesh_ == nullptr || depth_target_ == nullptr)
     {
-        throw std::runtime_error{"GPU mesh rendering resources are unavailable"};
+        throw std::runtime_error{"depth-buffered rendering resources are unavailable"};
     }
 
     VkCommandBufferBeginInfo begin_info{};
@@ -787,6 +797,8 @@ void SwapchainRenderer::record_commands(VkCommandBuffer command_buffer, std::uin
 
     apply_image_barrier(command_buffer, render_barrier);
 
+    depth_target_->prepare(command_buffer);
+
     VkRenderingAttachmentInfo color_attachment{};
 
     color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -806,6 +818,22 @@ void SwapchainRenderer::record_commands(VkCommandBuffer command_buffer, std::uin
     color_attachment.clearValue.color.float32[2] = 0.019F;
 
     color_attachment.clearValue.color.float32[3] = 1.0F;
+
+    VkRenderingAttachmentInfo depth_attachment{};
+
+    depth_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+
+    depth_attachment.imageView = depth_target_->image_view();
+
+    depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+
+    depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+
+    depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+    depth_attachment.clearValue.depthStencil.depth = 1.0F;
+
+    depth_attachment.clearValue.depthStencil.stencil = 0;
 
     VkRenderingInfo rendering_info{};
 
@@ -829,6 +857,8 @@ void SwapchainRenderer::record_commands(VkCommandBuffer command_buffer, std::uin
     rendering_info.colorAttachmentCount = 1;
 
     rendering_info.pColorAttachments = &color_attachment;
+
+    rendering_info.pDepthAttachment = &depth_attachment;
 
     vkCmdBeginRendering(command_buffer, &rendering_info);
 

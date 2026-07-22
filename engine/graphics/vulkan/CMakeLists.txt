@@ -5,6 +5,7 @@ add_library(
     STATIC
         src/barrier.cpp
         src/device_selection.cpp
+        src/depth_target.cpp
         src/gpu_mesh.cpp
         src/mesh_pipeline.cpp
         src/swapchain.cpp
