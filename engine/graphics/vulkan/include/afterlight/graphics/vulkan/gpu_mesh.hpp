@@ -2,9 +2,7 @@
 
 #include <afterlight/graphics/vulkan/vulkan_context.hpp>
 #include <afterlight/scene/mesh.hpp>
-#include <cstddef>
 #include <cstdint>
-#include <span>
 #include <volk.h>
 
 namespace afterlight::graphics::vulkan
@@ -34,17 +32,6 @@ private:
         VkBuffer buffer{VK_NULL_HANDLE};
         VkDeviceMemory memory{VK_NULL_HANDLE};
     };
-
-    struct MemorySelection final
-    {
-        std::uint32_t index{};
-        bool coherent{};
-    };
-
-    [[nodiscard]] BufferAllocation create_buffer(VkBufferUsageFlags usage,
-                                                 std::span<const std::byte> bytes);
-
-    [[nodiscard]] MemorySelection select_memory(std::uint32_t allowed_types) const;
 
     void destroy_buffer(BufferAllocation& allocation) noexcept;
 

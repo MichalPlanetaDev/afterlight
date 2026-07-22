@@ -120,6 +120,8 @@ void print_frame_smoke(const afterlight::core::BuildInfo& build,
 
     std::cout << " | normals=" << geometry.normal_count;
 
+    std::cout << " | mesh-memory=device-local";
+
     std::cout << " | lighting=directional";
 
     std::cout << " | uniforms=" << (bindings.descriptor_backed ? "descriptor-set" : "unavailable");

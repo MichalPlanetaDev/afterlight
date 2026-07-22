@@ -7,7 +7,7 @@ BuildInfo current_build_info() noexcept
 {
     return {
         .product_name = "Afterlight",
-        .semantic_version = "0.9.0-dev",
+        .semantic_version = "0.10.0-dev",
         .milestone = "Descriptor-Backed Scene Uniforms",
         .revision = "local",
     };
