@@ -75,3 +75,31 @@ set_tests_properties(
     PROPERTIES
         LABELS "unit;graphics;vulkan;rhi;synchronization"
 )
+
+add_executable(
+    afterlight_shader_binary_tests
+    shader_binary_test.cpp
+)
+
+afterlight_configure_target(
+    afterlight_shader_binary_tests
+)
+
+add_dependencies(
+    afterlight_shader_binary_tests
+    afterlight_shaders
+)
+
+add_test(
+    NAME afterlight.shader.compiled_binaries
+    COMMAND
+        afterlight_shader_binary_tests
+        "${AFTERLIGHT_VERTEX_SHADER_BINARY}"
+        "${AFTERLIGHT_FRAGMENT_SHADER_BINARY}"
+)
+
+set_tests_properties(
+    afterlight.shader.compiled_binaries
+    PROPERTIES
+        LABELS "unit;graphics;shader;hlsl;spirv"
+)

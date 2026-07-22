@@ -1,5 +1,6 @@
 #include <afterlight/graphics/vulkan/barrier.hpp>
 #include <afterlight/graphics/vulkan/swapchain.hpp>
+#include <afterlight/graphics/vulkan/triangle_pipeline.hpp>
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -9,6 +10,7 @@
 #include <span>
 #include <stdexcept>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace afterlight::graphics::vulkan
@@ -208,8 +210,10 @@ std::uint32_t choose_swapchain_image_count(const VkSurfaceCapabilitiesKHR& capab
     return count;
 }
 
-SwapchainRenderer::SwapchainRenderer(VulkanContext& context, const platform::Window& window)
-    : context_{context}
+SwapchainRenderer::SwapchainRenderer(VulkanContext& context,
+                                     const platform::Window& window,
+                                     std::filesystem::path shader_directory)
+    : context_{context}, shader_directory_{std::move(shader_directory)}
 {
     try
     {
@@ -530,6 +534,9 @@ bool SwapchainRenderer::create_swapchain(const platform::Window& window)
     create_image_resources();
     create_render_finished_semaphores();
 
+    triangle_pipeline_ =
+        std::make_unique<TrianglePipeline>(context_.device(), info_.format, shader_directory_);
+
     return true;
 }
 
@@ -616,6 +623,7 @@ void SwapchainRenderer::create_render_finished_semaphores()
 
 void SwapchainRenderer::destroy_swapchain() noexcept
 {
+    triangle_pipeline_.reset();
     for (const VkSemaphore semaphore : render_finished_)
     {
         if (semaphore != VK_NULL_HANDLE)
@@ -788,6 +796,17 @@ void SwapchainRenderer::record_commands(VkCommandBuffer command_buffer, std::uin
     rendering_info.pColorAttachments = &color_attachment;
 
     vkCmdBeginRendering(command_buffer, &rendering_info);
+
+    if (triangle_pipeline_ == nullptr)
+    {
+        throw std::runtime_error{"triangle graphics pipeline is unavailable"};
+    }
+
+    triangle_pipeline_->record(command_buffer,
+                               {
+                                   .width = info_.width,
+                                   .height = info_.height,
+                               });
 
     vkCmdEndRendering(command_buffer);
 
