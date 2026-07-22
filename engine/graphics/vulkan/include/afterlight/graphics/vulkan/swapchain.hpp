@@ -6,6 +6,7 @@
 #include <afterlight/rhi/resource.hpp>
 #include <afterlight/rhi/resource_state_tracker.hpp>
 #include <array>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -17,7 +18,8 @@
 namespace afterlight::graphics::vulkan
 {
 
-class TrianglePipeline;
+class GpuMesh;
+class MeshPipeline;
 
 struct SwapchainInfo final
 {
@@ -26,6 +28,12 @@ struct SwapchainInfo final
     std::uint32_t image_count{};
     VkFormat format{VK_FORMAT_UNDEFINED};
     VkPresentModeKHR present_mode{VK_PRESENT_MODE_FIFO_KHR};
+};
+
+struct GeometryInfo final
+{
+    std::uint32_t vertex_count{};
+    std::uint32_t index_count{};
 };
 
 [[nodiscard]] VkSurfaceFormatKHR choose_surface_format(std::span<const VkSurfaceFormatKHR> formats);
@@ -57,6 +65,8 @@ public:
     void request_resize() noexcept;
 
     [[nodiscard]] const SwapchainInfo& info() const noexcept;
+
+    [[nodiscard]] GeometryInfo geometry_info() const noexcept;
 
 private:
     static constexpr std::size_t frames_in_flight = 2;
@@ -98,6 +108,8 @@ private:
     VulkanContext& context_;
     std::filesystem::path shader_directory_;
 
+    std::chrono::steady_clock::time_point animation_start_;
+
     VkCommandPool command_pool_{VK_NULL_HANDLE};
     VkSwapchainKHR swapchain_{VK_NULL_HANDLE};
 
@@ -107,7 +119,8 @@ private:
     std::vector<VkFence> image_fences_;
     std::vector<rhi::TextureHandle> image_resources_;
 
-    std::unique_ptr<TrianglePipeline> triangle_pipeline_;
+    std::unique_ptr<GpuMesh> gpu_mesh_;
+    std::unique_ptr<MeshPipeline> mesh_pipeline_;
 
     std::array<FrameResources, frames_in_flight> frames_{};
 

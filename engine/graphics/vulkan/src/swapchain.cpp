@@ -1,14 +1,19 @@
 #include <afterlight/graphics/vulkan/barrier.hpp>
+#include <afterlight/graphics/vulkan/gpu_mesh.hpp>
+#include <afterlight/graphics/vulkan/mesh_pipeline.hpp>
 #include <afterlight/graphics/vulkan/swapchain.hpp>
-#include <afterlight/graphics/vulkan/triangle_pipeline.hpp>
+#include <afterlight/scene/camera.hpp>
+#include <afterlight/scene/mesh.hpp>
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <optional>
 #include <span>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -106,6 +111,7 @@ void apply_image_barrier(VkCommandBuffer command_buffer, const VkImageMemoryBarr
     dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
 
     dependency.imageMemoryBarrierCount = 1;
+
     dependency.pImageMemoryBarriers = &image_barrier;
 
     vkCmdPipelineBarrier2(command_buffer, &dependency);
@@ -213,12 +219,15 @@ std::uint32_t choose_swapchain_image_count(const VkSurfaceCapabilitiesKHR& capab
 SwapchainRenderer::SwapchainRenderer(VulkanContext& context,
                                      const platform::Window& window,
                                      std::filesystem::path shader_directory)
-    : context_{context}, shader_directory_{std::move(shader_directory)}
+    : context_{context}, shader_directory_{std::move(shader_directory)},
+      animation_start_{std::chrono::steady_clock::now()}
 {
     try
     {
         create_command_resources();
         create_frame_resources();
+
+        gpu_mesh_ = std::make_unique<GpuMesh>(context_, scene::make_observatory_aperture());
 
         if (!recreate_swapchain(window))
         {
@@ -228,6 +237,7 @@ SwapchainRenderer::SwapchainRenderer(VulkanContext& context,
     catch (...)
     {
         destroy_swapchain();
+        gpu_mesh_.reset();
         destroy_frame_resources();
         destroy_command_resources();
         throw;
@@ -242,6 +252,7 @@ SwapchainRenderer::~SwapchainRenderer()
     }
 
     destroy_swapchain();
+    gpu_mesh_.reset();
     destroy_frame_resources();
     destroy_command_resources();
 }
@@ -343,6 +354,19 @@ void SwapchainRenderer::request_resize() noexcept
 const SwapchainInfo& SwapchainRenderer::info() const noexcept
 {
     return info_;
+}
+
+GeometryInfo SwapchainRenderer::geometry_info() const noexcept
+{
+    if (gpu_mesh_ == nullptr)
+    {
+        return {};
+    }
+
+    return {
+        .vertex_count = gpu_mesh_->vertex_count(),
+        .index_count = gpu_mesh_->index_count(),
+    };
 }
 
 void SwapchainRenderer::create_command_resources()
@@ -467,7 +491,9 @@ bool SwapchainRenderer::create_swapchain(const platform::Window& window)
     create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 
     create_info.surface = context_.surface();
+
     create_info.minImageCount = image_count;
+
     create_info.imageFormat = surface_format.format;
 
     create_info.imageColorSpace = surface_format.colorSpace;
@@ -534,8 +560,8 @@ bool SwapchainRenderer::create_swapchain(const platform::Window& window)
     create_image_resources();
     create_render_finished_semaphores();
 
-    triangle_pipeline_ =
-        std::make_unique<TrianglePipeline>(context_.device(), info_.format, shader_directory_);
+    mesh_pipeline_ =
+        std::make_unique<MeshPipeline>(context_.device(), info_.format, shader_directory_);
 
     return true;
 }
@@ -623,7 +649,8 @@ void SwapchainRenderer::create_render_finished_semaphores()
 
 void SwapchainRenderer::destroy_swapchain() noexcept
 {
-    triangle_pipeline_.reset();
+    mesh_pipeline_.reset();
+
     for (const VkSemaphore semaphore : render_finished_)
     {
         if (semaphore != VK_NULL_HANDLE)
@@ -702,12 +729,14 @@ void SwapchainRenderer::destroy_command_resources() noexcept
 
 void SwapchainRenderer::wait_for_image(std::uint32_t image_index, VkFence frame_fence)
 {
-    if (static_cast<std::size_t>(image_index) >= image_fences_.size())
+    const std::size_t resource_index = static_cast<std::size_t>(image_index);
+
+    if (resource_index >= image_fences_.size())
     {
         throw std::runtime_error{"acquired swapchain image index is invalid"};
     }
 
-    const VkFence previous_fence = image_fences_[static_cast<std::size_t>(image_index)];
+    const VkFence previous_fence = image_fences_[resource_index];
 
     if (previous_fence != VK_NULL_HANDLE)
     {
@@ -719,7 +748,7 @@ void SwapchainRenderer::wait_for_image(std::uint32_t image_index, VkFence frame_
                         "vkWaitForFences(image)");
     }
 
-    image_fences_[static_cast<std::size_t>(image_index)] = frame_fence;
+    image_fences_[resource_index] = frame_fence;
 }
 
 void SwapchainRenderer::record_commands(VkCommandBuffer command_buffer, std::uint32_t image_index)
@@ -730,6 +759,11 @@ void SwapchainRenderer::record_commands(VkCommandBuffer command_buffer, std::uin
         resource_index >= image_resources_.size())
     {
         throw std::runtime_error{"swapchain recording index is invalid"};
+    }
+
+    if (mesh_pipeline_ == nullptr || gpu_mesh_ == nullptr)
+    {
+        throw std::runtime_error{"GPU mesh rendering resources are unavailable"};
     }
 
     VkCommandBufferBeginInfo begin_info{};
@@ -765,11 +799,11 @@ void SwapchainRenderer::record_commands(VkCommandBuffer command_buffer, std::uin
 
     color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-    color_attachment.clearValue.color.float32[0] = 0.004F;
+    color_attachment.clearValue.color.float32[0] = 0.003F;
 
-    color_attachment.clearValue.color.float32[1] = 0.008F;
+    color_attachment.clearValue.color.float32[1] = 0.007F;
 
-    color_attachment.clearValue.color.float32[2] = 0.018F;
+    color_attachment.clearValue.color.float32[2] = 0.019F;
 
     color_attachment.clearValue.color.float32[3] = 1.0F;
 
@@ -791,22 +825,28 @@ void SwapchainRenderer::record_commands(VkCommandBuffer command_buffer, std::uin
     };
 
     rendering_info.layerCount = 1;
+
     rendering_info.colorAttachmentCount = 1;
 
     rendering_info.pColorAttachments = &color_attachment;
 
     vkCmdBeginRendering(command_buffer, &rendering_info);
 
-    if (triangle_pipeline_ == nullptr)
-    {
-        throw std::runtime_error{"triangle graphics pipeline is unavailable"};
-    }
+    const float aspect_ratio = static_cast<float>(info_.width) / static_cast<float>(info_.height);
 
-    triangle_pipeline_->record(command_buffer,
-                               {
-                                   .width = info_.width,
-                                   .height = info_.height,
-                               });
+    const float elapsed_seconds =
+        std::chrono::duration<float>(std::chrono::steady_clock::now() - animation_start_).count();
+
+    const scene::TransformRows transform =
+        scene::make_observatory_transform(aspect_ratio, elapsed_seconds * 0.34F);
+
+    mesh_pipeline_->record(command_buffer,
+                           {
+                               .width = info_.width,
+                               .height = info_.height,
+                           },
+                           transform,
+                           *gpu_mesh_);
 
     vkCmdEndRendering(command_buffer);
 
@@ -862,12 +902,15 @@ void SwapchainRenderer::submit_frame(const FrameResources& frame, std::uint32_t 
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
 
     submit_info.waitSemaphoreInfoCount = 1;
+
     submit_info.pWaitSemaphoreInfos = &wait_info;
 
     submit_info.commandBufferInfoCount = 1;
+
     submit_info.pCommandBufferInfos = &command_info;
 
     submit_info.signalSemaphoreInfoCount = 1;
+
     submit_info.pSignalSemaphoreInfos = &signal_info;
 
     require_success(vkQueueSubmit2(context_.graphics_queue(), 1, &submit_info, frame.render_fence),
@@ -894,7 +937,9 @@ VkResult SwapchainRenderer::present_frame(std::uint32_t image_index)
     present_info.pWaitSemaphores = &wait_semaphore;
 
     present_info.swapchainCount = 1;
+
     present_info.pSwapchains = &swapchain_;
+
     present_info.pImageIndices = &image_index;
 
     return vkQueuePresentKHR(context_.present_queue(), &present_info);

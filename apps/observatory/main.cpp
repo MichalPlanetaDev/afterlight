@@ -45,12 +45,14 @@ struct FrameLoopResult final
         if (argument == "--smoke")
         {
             options.mode = RunMode::platform_smoke;
+
             continue;
         }
 
         if (argument == "--vulkan-smoke")
         {
             options.mode = RunMode::vulkan_smoke;
+
             continue;
         }
 
@@ -92,6 +94,7 @@ void print_desktop_device(const afterlight::core::BuildInfo& build,
 void print_frame_smoke(const afterlight::core::BuildInfo& build,
                        const afterlight::graphics::vulkan::VulkanDeviceInfo& device,
                        const afterlight::graphics::vulkan::SwapchainInfo& swapchain,
+                       const afterlight::graphics::vulkan::GeometryInfo& geometry,
                        std::uint32_t presented_frames)
 {
     std::cout << build.product_name << ' ' << build.semantic_version << " | backend=vulkan"
@@ -99,7 +102,8 @@ void print_frame_smoke(const afterlight::core::BuildInfo& build,
               << " | extent=" << swapchain.width << 'x' << swapchain.height
               << " | images=" << swapchain.image_count
               << " | format=" << static_cast<std::uint32_t>(swapchain.format)
-              << " | geometry=triangle"
+              << " | geometry=observatory-aperture"
+              << " | vertices=" << geometry.vertex_count << " | indices=" << geometry.index_count
               << " | validation=" << (device.validation_enabled ? "on" : "off") << '\n';
 }
 
@@ -115,6 +119,7 @@ void print_frame_smoke(const afterlight::core::BuildInfo& build,
         switch (event.type)
         {
             case afterlight::platform::PlatformEventType::quit_requested:
+
             case afterlight::platform::PlatformEventType::window_close_requested:
                 return false;
 
@@ -133,6 +138,7 @@ run_frame_loop(afterlight::platform::Window& window,
                bool smoke)
 {
     FrameLoopResult result;
+
     std::uint32_t smoke_iterations = 0;
     bool running = true;
 
@@ -231,8 +237,11 @@ int run_vulkan(afterlight::core::ApplicationLifecycle& lifecycle, bool smoke)
 
         if (smoke)
         {
-            print_frame_smoke(
-                build, vulkan.device_info(), renderer.info(), result.presented_frames);
+            print_frame_smoke(build,
+                              vulkan.device_info(),
+                              renderer.info(),
+                              renderer.geometry_info(),
+                              result.presented_frames);
         }
 
         require_transition(lifecycle.request_stop(), "request stop");

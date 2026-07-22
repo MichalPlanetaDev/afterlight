@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.28)
 
 project(
     Afterlight
-    VERSION 0.5.0
+    VERSION 0.6.0
     DESCRIPTION "Native renderer and interactive visual experience"
     LANGUAGES CXX
 )
@@ -24,10 +24,10 @@ afterlight_configure_project_analysis()
 include(CTest)
 
 add_subdirectory(shaders)
-
 add_subdirectory(engine/core)
 add_subdirectory(engine/rhi)
 add_subdirectory(engine/platform)
+add_subdirectory(engine/scene)
 add_subdirectory(engine/graphics/vulkan)
 add_subdirectory(apps/observatory)
 

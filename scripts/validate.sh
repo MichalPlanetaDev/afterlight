@@ -42,8 +42,8 @@ run()
         grep -Ei \
             'error:|fatal:|failed|failure|undefined reference|tests failed|validation error|VUID-' \
             "$log" |
-            tail -n 50 ||
-            tail -n 50 "$log"
+            tail -n 60 ||
+            tail -n 60 "$log"
 
         printf '\nLog: %s\n' "$log"
         exit "$status"
@@ -74,8 +74,8 @@ print(len(json.load(sys.stdin).get("tests", [])))
 '
     )"
 
-    [[ "$count" == "12" ]] || {
-        echo "Expected 12 tests, found $count"
+    [[ "$count" == "14" ]] || {
+        echo "Expected 14 tests, found $count"
         return 1
     }
 }
@@ -90,7 +90,7 @@ platform_smoke()
             --smoke
     )"
 
-    expected="Afterlight 0.5.0-dev | platform=dummy | window=1280x720"
+    expected="Afterlight 0.6.0-dev | platform=dummy | window=1280x720"
 
     [[ "$output" == "$expected" ]] || {
         echo "Expected: $expected"
@@ -112,7 +112,7 @@ vulkan_smoke()
     )"
 
     if ! grep -Eq \
-        '^Afterlight 0[.]5[.]0-dev [|] backend=vulkan [|] device=.+ [|] presented=3 [|] extent=[0-9]+x[0-9]+ [|] images=[0-9]+ [|] format=[0-9]+ [|] geometry=triangle [|] validation=on$' \
+        '^Afterlight 0[.]6[.]0-dev [|] backend=vulkan [|] device=.+ [|] presented=3 [|] extent=[0-9]+x[0-9]+ [|] images=[0-9]+ [|] format=[0-9]+ [|] geometry=observatory-aperture [|] vertices=12 [|] indices=36 [|] validation=on$' \
         <<<"$output"
     then
         echo "Unexpected Vulkan smoke output:"

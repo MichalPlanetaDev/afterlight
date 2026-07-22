@@ -5,8 +5,9 @@ add_library(
     STATIC
         src/barrier.cpp
         src/device_selection.cpp
+        src/gpu_mesh.cpp
+        src/mesh_pipeline.cpp
         src/swapchain.cpp
-        src/triangle_pipeline.cpp
         src/vulkan_context.cpp
 )
 
@@ -23,6 +24,7 @@ target_link_libraries(
     PUBLIC
         Afterlight::Platform
         Afterlight::Rhi
+        Afterlight::Scene
         volk::volk_headers
     PRIVATE
         volk::volk
