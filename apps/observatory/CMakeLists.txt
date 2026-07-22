@@ -47,7 +47,7 @@ if(BUILD_TESTING)
         PROPERTIES
             LABELS "integration;application;platform"
             PASS_REGULAR_EXPRESSION
-                "Afterlight 0[.]5[.]0-dev [|] platform=dummy [|] window=1280x720"
+                "Afterlight 0[.]6[.]0-dev [|] platform=dummy [|] window=1280x720"
             TIMEOUT 15
     )
 
@@ -60,9 +60,9 @@ if(BUILD_TESTING)
         set_tests_properties(
             afterlight.app.vulkan_geometry_smoke
             PROPERTIES
-                LABELS "integration;application;vulkan;presentation;shader;geometry"
+                LABELS "integration;application;vulkan;presentation;shader;geometry;buffer;camera"
                 PASS_REGULAR_EXPRESSION
-                    "Afterlight 0[.]5[.]0-dev [|] backend=vulkan [|] device=.+ [|] presented=3 [|] extent=[0-9]+x[0-9]+ [|] images=[0-9]+ [|] format=[0-9]+ [|] geometry=triangle [|] validation=on"
+                    "Afterlight 0[.]6[.]0-dev [|] backend=vulkan [|] device=.+ [|] presented=3 [|] extent=[0-9]+x[0-9]+ [|] images=[0-9]+ [|] format=[0-9]+ [|] geometry=observatory-aperture [|] vertices=12 [|] indices=36 [|] validation=on"
                 TIMEOUT 30
         )
     endif()

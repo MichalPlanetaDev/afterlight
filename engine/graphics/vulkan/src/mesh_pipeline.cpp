@@ -1,4 +1,6 @@
-#include <afterlight/graphics/vulkan/triangle_pipeline.hpp>
+#include <afterlight/graphics/vulkan/gpu_mesh.hpp>
+#include <afterlight/graphics/vulkan/mesh_pipeline.hpp>
+#include <afterlight/scene/mesh.hpp>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -108,14 +110,14 @@ void require_success(VkResult result, std::string_view operation)
 
 } // namespace
 
-TrianglePipeline::TrianglePipeline(VkDevice device,
-                                   VkFormat color_format,
-                                   const std::filesystem::path& shader_directory)
+MeshPipeline::MeshPipeline(VkDevice device,
+                           VkFormat color_format,
+                           const std::filesystem::path& shader_directory)
     : device_{device}
 {
     if (device_ == VK_NULL_HANDLE)
     {
-        throw std::invalid_argument{"triangle pipeline requires a Vulkan device"};
+        throw std::invalid_argument{"mesh pipeline requires a Vulkan device"};
     }
 
     try
@@ -131,16 +133,19 @@ TrianglePipeline::TrianglePipeline(VkDevice device,
     }
 }
 
-TrianglePipeline::~TrianglePipeline()
+MeshPipeline::~MeshPipeline()
 {
     reset();
 }
 
-void TrianglePipeline::record(VkCommandBuffer command_buffer, VkExtent2D extent) const
+void MeshPipeline::record(VkCommandBuffer command_buffer,
+                          VkExtent2D extent,
+                          const scene::TransformRows& transform,
+                          const GpuMesh& mesh) const
 {
     if (command_buffer == VK_NULL_HANDLE || pipeline_ == VK_NULL_HANDLE)
     {
-        throw std::logic_error{"triangle pipeline is not recordable"};
+        throw std::logic_error{"mesh pipeline is not recordable"};
     }
 
     VkViewport viewport{};
@@ -170,27 +175,44 @@ void TrianglePipeline::record(VkCommandBuffer command_buffer, VkExtent2D extent)
 
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
 
-    vkCmdDraw(command_buffer, 3, 1, 0, 0);
+    vkCmdPushConstants(command_buffer,
+                       pipeline_layout_,
+                       VK_SHADER_STAGE_VERTEX_BIT,
+                       0,
+                       static_cast<std::uint32_t>(sizeof(scene::TransformRows)),
+                       &transform);
+
+    mesh.record(command_buffer);
 }
 
-void TrianglePipeline::create_pipeline_layout()
+void MeshPipeline::create_pipeline_layout()
 {
+    VkPushConstantRange push_constant{};
+
+    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    push_constant.offset = 0;
+
+    push_constant.size = static_cast<std::uint32_t>(sizeof(scene::TransformRows));
+
     VkPipelineLayoutCreateInfo create_info{};
 
     create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+    create_info.pushConstantRangeCount = 1;
+
+    create_info.pPushConstantRanges = &push_constant;
 
     require_success(vkCreatePipelineLayout(device_, &create_info, nullptr, &pipeline_layout_),
                     "vkCreatePipelineLayout");
 }
 
-void TrianglePipeline::create_graphics_pipeline(VkFormat color_format,
-                                                const std::filesystem::path& shader_directory)
+void MeshPipeline::create_graphics_pipeline(VkFormat color_format,
+                                            const std::filesystem::path& shader_directory)
 {
-    const std::vector<std::uint32_t> vertex_code =
-        load_spirv(shader_directory / "triangle.vert.spv");
+    const std::vector<std::uint32_t> vertex_code = load_spirv(shader_directory / "mesh.vert.spv");
 
-    const std::vector<std::uint32_t> fragment_code =
-        load_spirv(shader_directory / "triangle.frag.spv");
+    const std::vector<std::uint32_t> fragment_code = load_spirv(shader_directory / "mesh.frag.spv");
 
     const VkShaderModule vertex_module = create_shader_module(device_, vertex_code);
 
@@ -223,9 +245,41 @@ void TrianglePipeline::create_graphics_pipeline(VkFormat color_format,
     stages[1].module = fragment_module;
     stages[1].pName = "ps_main";
 
+    VkVertexInputBindingDescription binding{};
+
+    binding.binding = 0;
+
+    binding.stride = static_cast<std::uint32_t>(sizeof(scene::Vertex));
+
+    binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    std::array<VkVertexInputAttributeDescription, 2> attributes{};
+
+    attributes[0].location = 0;
+    attributes[0].binding = 0;
+
+    attributes[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+
+    attributes[0].offset = static_cast<std::uint32_t>(offsetof(scene::Vertex, position));
+
+    attributes[1].location = 1;
+    attributes[1].binding = 0;
+
+    attributes[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+
+    attributes[1].offset = static_cast<std::uint32_t>(offsetof(scene::Vertex, color));
+
     VkPipelineVertexInputStateCreateInfo vertex_input{};
 
     vertex_input.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+    vertex_input.vertexBindingDescriptionCount = 1;
+
+    vertex_input.pVertexBindingDescriptions = &binding;
+
+    vertex_input.vertexAttributeDescriptionCount = static_cast<std::uint32_t>(attributes.size());
+
+    vertex_input.pVertexAttributeDescriptions = attributes.data();
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly{};
 
@@ -337,7 +391,7 @@ void TrianglePipeline::create_graphics_pipeline(VkFormat color_format,
     require_success(result, "vkCreateGraphicsPipelines");
 }
 
-void TrianglePipeline::reset() noexcept
+void MeshPipeline::reset() noexcept
 {
     if (pipeline_ != VK_NULL_HANDLE)
     {

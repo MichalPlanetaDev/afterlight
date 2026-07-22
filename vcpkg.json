@@ -1,6 +1,6 @@
 {
   "name": "afterlight",
-  "version-semver": "0.5.0",
+  "version-semver": "0.6.0",
   "builtin-baseline": "3ddaad9be959816602453ecb05533f8732464ef4",
   "dependencies": [
     "directx-dxc",
@@ -16,6 +16,7 @@
       ]
     },
     "volk",
-    "vulkan-headers"
+    "vulkan-headers",
+    "glm"
   ]
 }

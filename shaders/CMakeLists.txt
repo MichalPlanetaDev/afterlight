@@ -18,21 +18,21 @@ set(
 
 set(
     AFTERLIGHT_VERTEX_SHADER_BINARY
-    "${AFTERLIGHT_SHADER_OUTPUT_DIRECTORY}/triangle.vert.spv"
+    "${AFTERLIGHT_SHADER_OUTPUT_DIRECTORY}/mesh.vert.spv"
     CACHE INTERNAL
-    "Afterlight triangle vertex shader"
+    "Afterlight mesh vertex shader"
 )
 
 set(
     AFTERLIGHT_FRAGMENT_SHADER_BINARY
-    "${AFTERLIGHT_SHADER_OUTPUT_DIRECTORY}/triangle.frag.spv"
+    "${AFTERLIGHT_SHADER_OUTPUT_DIRECTORY}/mesh.frag.spv"
     CACHE INTERNAL
-    "Afterlight triangle fragment shader"
+    "Afterlight mesh fragment shader"
 )
 
 set(
-    AFTERLIGHT_TRIANGLE_SHADER_SOURCE
-    "${CMAKE_CURRENT_SOURCE_DIR}/triangle.hlsl"
+    AFTERLIGHT_MESH_SHADER_SOURCE
+    "${CMAKE_CURRENT_SOURCE_DIR}/mesh.hlsl"
 )
 
 add_custom_command(
@@ -50,12 +50,12 @@ add_custom_command(
         -T vs_6_0
         -E vs_main
         -Fo "${AFTERLIGHT_VERTEX_SHADER_BINARY}"
-        "${AFTERLIGHT_TRIANGLE_SHADER_SOURCE}"
+        "${AFTERLIGHT_MESH_SHADER_SOURCE}"
     DEPENDS
-        "${AFTERLIGHT_TRIANGLE_SHADER_SOURCE}"
+        "${AFTERLIGHT_MESH_SHADER_SOURCE}"
         "${DIRECTX_DXC_TOOL}"
     COMMENT
-        "Compiling triangle vertex shader with DXC"
+        "Compiling mesh vertex shader with DXC"
     VERBATIM
 )
 
@@ -74,12 +74,12 @@ add_custom_command(
         -T ps_6_0
         -E ps_main
         -Fo "${AFTERLIGHT_FRAGMENT_SHADER_BINARY}"
-        "${AFTERLIGHT_TRIANGLE_SHADER_SOURCE}"
+        "${AFTERLIGHT_MESH_SHADER_SOURCE}"
     DEPENDS
-        "${AFTERLIGHT_TRIANGLE_SHADER_SOURCE}"
+        "${AFTERLIGHT_MESH_SHADER_SOURCE}"
         "${DIRECTX_DXC_TOOL}"
     COMMENT
-        "Compiling triangle fragment shader with DXC"
+        "Compiling mesh fragment shader with DXC"
     VERBATIM
 )
 

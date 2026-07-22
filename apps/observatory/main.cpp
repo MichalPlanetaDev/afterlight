@@ -45,12 +45,14 @@ struct FrameLoopResult final
         if (argument == "--smoke")
         {
             options.mode = RunMode::platform_smoke;
+
             continue;
         }
 
         if (argument == "--vulkan-smoke")
         {
             options.mode = RunMode::vulkan_smoke;
+
             continue;
         }
 
@@ -92,15 +94,28 @@ void print_desktop_device(const afterlight::core::BuildInfo& build,
 void print_frame_smoke(const afterlight::core::BuildInfo& build,
                        const afterlight::graphics::vulkan::VulkanDeviceInfo& device,
                        const afterlight::graphics::vulkan::SwapchainInfo& swapchain,
+                       const afterlight::graphics::vulkan::GeometryInfo& geometry,
                        std::uint32_t presented_frames)
 {
-    std::cout << build.product_name << ' ' << build.semantic_version << " | backend=vulkan"
-              << " | device=" << device.name << " | presented=" << presented_frames
-              << " | extent=" << swapchain.width << 'x' << swapchain.height
-              << " | images=" << swapchain.image_count
-              << " | format=" << static_cast<std::uint32_t>(swapchain.format)
-              << " | geometry=triangle"
-              << " | validation=" << (device.validation_enabled ? "on" : "off") << '\n';
+    std::cout << build.product_name << ' ' << build.semantic_version << " | backend=vulkan";
+
+    std::cout << " | device=" << device.name;
+
+    std::cout << " | presented=" << presented_frames;
+
+    std::cout << " | extent=" << swapchain.width << 'x' << swapchain.height;
+
+    std::cout << " | images=" << swapchain.image_count;
+
+    std::cout << " | format=" << static_cast<std::uint32_t>(swapchain.format);
+
+    std::cout << " | geometry=observatory-aperture";
+
+    std::cout << " | vertices=" << geometry.vertex_count;
+
+    std::cout << " | indices=" << geometry.index_count;
+
+    std::cout << " | validation=" << (device.validation_enabled ? "on" : "off") << '\n';
 }
 
 [[nodiscard]] bool process_events(afterlight::platform::Window& window,
@@ -115,6 +130,7 @@ void print_frame_smoke(const afterlight::core::BuildInfo& build,
         switch (event.type)
         {
             case afterlight::platform::PlatformEventType::quit_requested:
+
             case afterlight::platform::PlatformEventType::window_close_requested:
                 return false;
 
@@ -133,6 +149,7 @@ run_frame_loop(afterlight::platform::Window& window,
                bool smoke)
 {
     FrameLoopResult result;
+
     std::uint32_t smoke_iterations = 0;
     bool running = true;
 
@@ -231,8 +248,11 @@ int run_vulkan(afterlight::core::ApplicationLifecycle& lifecycle, bool smoke)
 
         if (smoke)
         {
-            print_frame_smoke(
-                build, vulkan.device_info(), renderer.info(), result.presented_frames);
+            print_frame_smoke(build,
+                              vulkan.device_info(),
+                              renderer.info(),
+                              renderer.geometry_info(),
+                              result.presented_frames);
         }
 
         require_transition(lifecycle.request_stop(), "request stop");

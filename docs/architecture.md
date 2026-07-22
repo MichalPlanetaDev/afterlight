@@ -1,20 +1,26 @@
 # Architecture
 
-Afterlight separates application policy, platform integration, backend-independent rendering contracts, shader compilation and Vulkan execution.
+Afterlight separates application policy, platform integration, scene data, backend-independent rendering contracts, shader compilation and Vulkan execution.
 
-    HLSL source
+    deterministic aperture mesh
         |
-        +--- DXC
+        +--- host-visible vertex buffer
+        +--- host-visible index buffer
                 |
-                +--- Vulkan 1.3 SPIR-V
+                +--- Vulkan binding
+                +--- indexed draw
+
+    model transform
+        |
+        +--- view transform
+                |
+                +--- Vulkan perspective projection
                         |
-                        +--- shader modules
-                        +--- graphics pipeline
-                        +--- dynamic rendering
-                        +--- procedural draw
+                        +--- push constants
+                        +--- HLSL vertex stage
 
-Shader compilation belongs to the CMake dependency graph. The application does not invoke the compiler at runtime. Generated binaries are validated before runtime presentation tests execute.
+The scene module owns deterministic CPU geometry and camera mathematics without exposing GLM types through its public interface. The Vulkan backend owns buffer allocation, memory selection, mapping, synchronization and draw recording.
 
-The first graphics pipeline owns its pipeline layout and Vulkan pipeline. It uses no descriptors and no vertex buffers. The vertex shader derives positions and colors from the vertex identifier, while the fragment shader writes interpolated color into the sRGB presentation attachment.
+The current upload path uses host-visible memory because the aperture is small and immutable. A later asset-streaming milestone can introduce staging buffers and device-local allocation without changing scene mesh data.
 
-Swapchain recreation rebuilds the format-dependent graphics pipeline together with the presentation resources while preserving the device, command infrastructure, frame scheduler and backend-independent resource registry.
+Swapchain recreation rebuilds the format-dependent graphics pipeline while retaining the GPU mesh, camera state, command infrastructure, frame scheduler and backend-independent resource registry.
