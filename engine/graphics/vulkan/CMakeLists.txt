@@ -6,6 +6,7 @@ add_library(
         src/barrier.cpp
         src/device_selection.cpp
         src/swapchain.cpp
+        src/triangle_pipeline.cpp
         src/vulkan_context.cpp
 )
 

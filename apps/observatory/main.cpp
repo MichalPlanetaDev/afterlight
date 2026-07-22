@@ -2,6 +2,7 @@
 #include <afterlight/core/build_info.hpp>
 #include <afterlight/graphics/vulkan/swapchain.hpp>
 #include <afterlight/graphics/vulkan/vulkan_context.hpp>
+#include <afterlight/observatory/shader_paths.hpp>
 #include <afterlight/platform/platform.hpp>
 #include <chrono>
 #include <cstdint>
@@ -98,6 +99,7 @@ void print_frame_smoke(const afterlight::core::BuildInfo& build,
               << " | extent=" << swapchain.width << 'x' << swapchain.height
               << " | images=" << swapchain.image_count
               << " | format=" << static_cast<std::uint32_t>(swapchain.format)
+              << " | geometry=triangle"
               << " | validation=" << (device.validation_enabled ? "on" : "off") << '\n';
 }
 
@@ -217,6 +219,7 @@ int run_vulkan(afterlight::core::ApplicationLifecycle& lifecycle, bool smoke)
         afterlight::graphics::vulkan::SwapchainRenderer renderer{
             vulkan,
             window,
+            afterlight::observatory::shader_directory,
         };
 
         if (!smoke)

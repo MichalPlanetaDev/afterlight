@@ -1,0 +1,11 @@
+#pragma once
+
+#include <filesystem>
+
+namespace afterlight::observatory
+{
+
+inline const std::filesystem::path shader_directory{
+    R"afterlight(@AFTERLIGHT_SHADER_OUTPUT_DIRECTORY@)afterlight"};
+
+}

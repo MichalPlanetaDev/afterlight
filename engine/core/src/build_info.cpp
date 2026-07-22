@@ -7,8 +7,8 @@ BuildInfo current_build_info() noexcept
 {
     return {
         .product_name = "Afterlight",
-        .semantic_version = "0.4.0-dev",
-        .milestone = "RHI Foundation",
+        .semantic_version = "0.5.0-dev",
+        .milestone = "HLSL Pipeline and First Geometry",
         .revision = "local",
     };
 }

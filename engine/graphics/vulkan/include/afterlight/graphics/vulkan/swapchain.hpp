@@ -8,12 +8,16 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
+#include <memory>
 #include <span>
 #include <vector>
 #include <volk.h>
 
 namespace afterlight::graphics::vulkan
 {
+
+class TrianglePipeline;
 
 struct SwapchainInfo final
 {
@@ -37,7 +41,9 @@ choose_swapchain_image_count(const VkSurfaceCapabilitiesKHR& capabilities) noexc
 class SwapchainRenderer final
 {
 public:
-    SwapchainRenderer(VulkanContext& context, const platform::Window& window);
+    SwapchainRenderer(VulkanContext& context,
+                      const platform::Window& window,
+                      std::filesystem::path shader_directory);
 
     ~SwapchainRenderer();
 
@@ -90,6 +96,7 @@ private:
     [[nodiscard]] static rhi::TextureFormat texture_format(VkFormat format) noexcept;
 
     VulkanContext& context_;
+    std::filesystem::path shader_directory_;
 
     VkCommandPool command_pool_{VK_NULL_HANDLE};
     VkSwapchainKHR swapchain_{VK_NULL_HANDLE};
@@ -99,6 +106,8 @@ private:
     std::vector<VkSemaphore> render_finished_;
     std::vector<VkFence> image_fences_;
     std::vector<rhi::TextureHandle> image_resources_;
+
+    std::unique_ptr<TrianglePipeline> triangle_pipeline_;
 
     std::array<FrameResources, frames_in_flight> frames_{};
 
