@@ -334,11 +334,11 @@ void VulkanContext::create_instance(const VulkanContextOptions& options)
 
     application_info.pApplicationName = options.application_name.c_str();
 
-    application_info.applicationVersion = VK_MAKE_API_VERSION(0, 0, 7, 0);
+    application_info.applicationVersion = VK_MAKE_API_VERSION(0, 0, 8, 0);
 
     application_info.pEngineName = "Afterlight";
 
-    application_info.engineVersion = VK_MAKE_API_VERSION(0, 0, 7, 0);
+    application_info.engineVersion = VK_MAKE_API_VERSION(0, 0, 8, 0);
 
     application_info.apiVersion = VK_API_VERSION_1_3;
 

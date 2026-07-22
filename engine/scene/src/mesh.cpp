@@ -1,7 +1,9 @@
 #include <afterlight/scene/mesh.hpp>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 
 namespace afterlight::scene
 {
@@ -13,7 +15,33 @@ constexpr std::size_t aperture_segment_count = 6;
 constexpr float front_depth = 0.18F;
 constexpr float back_depth = -0.18F;
 
-constexpr std::array<std::array<float, 2>, aperture_segment_count> outer_positions{{
+using Position = std::array<float, 3>;
+using Direction = std::array<float, 3>;
+using Color = std::array<float, 3>;
+using PlanarPoint = std::array<float, 2>;
+using QuadPositions = std::array<Position, 4>;
+
+struct QuadSurface final
+{
+    QuadPositions positions{};
+    Direction normal{};
+    Color color{};
+};
+
+struct RadialNormalParameters final
+{
+    PlanarPoint first{};
+    PlanarPoint second{};
+    bool inward{};
+};
+
+struct ColorAdjustment final
+{
+    float scale{};
+    float offset{};
+};
+
+constexpr std::array<PlanarPoint, aperture_segment_count> outer_positions{{
     {1.0F, 0.0F},
     {0.5F, 0.8660254F},
     {-0.5F, 0.8660254F},
@@ -22,7 +50,7 @@ constexpr std::array<std::array<float, 2>, aperture_segment_count> outer_positio
     {0.5F, -0.8660254F},
 }};
 
-constexpr std::array<std::array<float, 2>, aperture_segment_count> inner_positions{{
+constexpr std::array<PlanarPoint, aperture_segment_count> inner_positions{{
     {0.58F, 0.0F},
     {0.29F, 0.5022947F},
     {-0.29F, 0.5022947F},
@@ -31,7 +59,7 @@ constexpr std::array<std::array<float, 2>, aperture_segment_count> inner_positio
     {0.29F, -0.5022947F},
 }};
 
-constexpr std::array<std::array<float, 3>, aperture_segment_count> segment_colors{{
+constexpr std::array<Color, aperture_segment_count> segment_colors{{
     {1.0F, 0.31F, 0.08F},
     {1.0F, 0.67F, 0.12F},
     {0.18F, 0.82F, 1.0F},
@@ -40,36 +68,82 @@ constexpr std::array<std::array<float, 3>, aperture_segment_count> segment_color
     {0.91F, 0.16F, 0.72F},
 }};
 
-[[nodiscard]] std::array<float, 3>
-scaled_color(const std::array<float, 3>& color, float scale, float offset) noexcept
+[[nodiscard]] Position position_at(const PlanarPoint& point, float depth) noexcept
 {
     return {
-        color[0] * scale + offset,
-        color[1] * scale + offset,
-        color[2] * scale + offset,
+        point[0],
+        point[1],
+        depth,
     };
 }
 
-[[nodiscard]] std::uint16_t vertex_index(std::uint16_t segment, std::uint16_t component) noexcept
+[[nodiscard]] Direction radial_normal(const RadialNormalParameters& parameters)
 {
-    return static_cast<std::uint16_t>(segment * 4U + component);
+    float horizontal = parameters.first[0] + parameters.second[0];
+
+    float vertical = parameters.first[1] + parameters.second[1];
+
+    const float length = std::sqrt(horizontal * horizontal + vertical * vertical);
+
+    if (length <= 0.0F)
+    {
+        return {
+            1.0F,
+            0.0F,
+            0.0F,
+        };
+    }
+
+    const float orientation = parameters.inward ? -1.0F : 1.0F;
+
+    horizontal = horizontal / length * orientation;
+
+    vertical = vertical / length * orientation;
+
+    return {
+        horizontal,
+        vertical,
+        0.0F,
+    };
 }
 
-void append_quad(std::vector<std::uint16_t>& indices,
-                 std::uint16_t first,
-                 std::uint16_t second,
-                 std::uint16_t third,
-                 std::uint16_t fourth)
+[[nodiscard]] Color adjusted_color(const Color& color, const ColorAdjustment& adjustment) noexcept
 {
-    indices.insert(indices.end(),
-                   {
-                       first,
-                       second,
-                       third,
-                       first,
-                       third,
-                       fourth,
-                   });
+    return {
+        color[0] * adjustment.scale + adjustment.offset,
+        color[1] * adjustment.scale + adjustment.offset,
+        color[2] * adjustment.scale + adjustment.offset,
+    };
+}
+
+void append_quad(MeshData& mesh, const QuadSurface& surface)
+{
+    const auto base = static_cast<std::uint16_t>(mesh.vertices.size());
+
+    for (const Position& position : surface.positions)
+    {
+        mesh.vertices.push_back({
+            .position = position,
+            .normal = surface.normal,
+            .color = surface.color,
+        });
+    }
+
+    const auto second = static_cast<std::uint16_t>(base + 1U);
+
+    const auto third = static_cast<std::uint16_t>(base + 2U);
+
+    const auto fourth = static_cast<std::uint16_t>(base + 3U);
+
+    mesh.indices.insert(mesh.indices.end(),
+                        {
+                            base,
+                            second,
+                            third,
+                            base,
+                            third,
+                            fourth,
+                        });
 }
 
 } // namespace
@@ -78,88 +152,111 @@ MeshData make_observatory_aperture()
 {
     MeshData mesh;
 
-    mesh.vertices.reserve(aperture_segment_count * 4);
+    mesh.vertices.reserve(aperture_segment_count * 16);
 
     mesh.indices.reserve(aperture_segment_count * 24);
 
     for (std::size_t segment = 0; segment < aperture_segment_count; ++segment)
     {
-        const auto& outer = outer_positions[segment];
+        const std::size_t next = (segment + 1U) % aperture_segment_count;
 
-        const auto& inner = inner_positions[segment];
+        const PlanarPoint& outer = outer_positions[segment];
 
-        const auto& color = segment_colors[segment];
+        const PlanarPoint& next_outer = outer_positions[next];
 
-        mesh.vertices.push_back({
-            .position =
-                {
-                    outer[0],
-                    outer[1],
-                    front_depth,
-                },
-            .color = color,
-        });
+        const PlanarPoint& inner = inner_positions[segment];
 
-        mesh.vertices.push_back({
-            .position =
-                {
-                    inner[0],
-                    inner[1],
-                    front_depth,
-                },
-            .color = scaled_color(color, 0.42F, 0.035F),
-        });
+        const PlanarPoint& next_inner = inner_positions[next];
 
-        mesh.vertices.push_back({
-            .position =
-                {
-                    outer[0],
-                    outer[1],
-                    back_depth,
-                },
-            .color = scaled_color(color, 0.22F, 0.018F),
-        });
+        const Color& color = segment_colors[segment];
 
-        mesh.vertices.push_back({
-            .position =
-                {
-                    inner[0],
-                    inner[1],
-                    back_depth,
-                },
-            .color = scaled_color(color, 0.13F, 0.012F),
-        });
-    }
+        const Color rear_color = adjusted_color(color,
+                                                {
+                                                    .scale = 0.20F,
+                                                    .offset = 0.012F,
+                                                });
 
-    for (std::uint16_t segment = 0; segment < static_cast<std::uint16_t>(aperture_segment_count);
-         ++segment)
-    {
-        const std::uint16_t next =
-            static_cast<std::uint16_t>((segment + 1U) % aperture_segment_count);
+        const Color outer_color = adjusted_color(color,
+                                                 {
+                                                     .scale = 0.52F,
+                                                     .offset = 0.025F,
+                                                 });
 
-        const std::uint16_t outer_front = vertex_index(segment, 0);
+        const Color inner_color = adjusted_color(color,
+                                                 {
+                                                     .scale = 0.30F,
+                                                     .offset = 0.018F,
+                                                 });
 
-        const std::uint16_t inner_front = vertex_index(segment, 1);
+        append_quad(mesh,
+                    {
+                        .positions =
+                            {
+                                position_at(outer, front_depth),
+                                position_at(next_outer, front_depth),
+                                position_at(next_inner, front_depth),
+                                position_at(inner, front_depth),
+                            },
+                        .normal =
+                            {
+                                0.0F,
+                                0.0F,
+                                1.0F,
+                            },
+                        .color = color,
+                    });
 
-        const std::uint16_t outer_back = vertex_index(segment, 2);
+        append_quad(mesh,
+                    {
+                        .positions =
+                            {
+                                position_at(outer, back_depth),
+                                position_at(inner, back_depth),
+                                position_at(next_inner, back_depth),
+                                position_at(next_outer, back_depth),
+                            },
+                        .normal =
+                            {
+                                0.0F,
+                                0.0F,
+                                -1.0F,
+                            },
+                        .color = rear_color,
+                    });
 
-        const std::uint16_t inner_back = vertex_index(segment, 3);
+        append_quad(mesh,
+                    {
+                        .positions =
+                            {
+                                position_at(outer, front_depth),
+                                position_at(outer, back_depth),
+                                position_at(next_outer, back_depth),
+                                position_at(next_outer, front_depth),
+                            },
+                        .normal = radial_normal({
+                            .first = outer,
+                            .second = next_outer,
+                            .inward = false,
+                        }),
+                        .color = outer_color,
+                    });
 
-        const std::uint16_t next_outer_front = vertex_index(next, 0);
-
-        const std::uint16_t next_inner_front = vertex_index(next, 1);
-
-        const std::uint16_t next_outer_back = vertex_index(next, 2);
-
-        const std::uint16_t next_inner_back = vertex_index(next, 3);
-
-        append_quad(mesh.indices, outer_front, next_outer_front, next_inner_front, inner_front);
-
-        append_quad(mesh.indices, outer_back, inner_back, next_inner_back, next_outer_back);
-
-        append_quad(mesh.indices, outer_front, outer_back, next_outer_back, next_outer_front);
-
-        append_quad(mesh.indices, inner_front, next_inner_front, next_inner_back, inner_back);
+        append_quad(mesh,
+                    {
+                        .positions =
+                            {
+                                position_at(inner, front_depth),
+                                position_at(next_inner, front_depth),
+                                position_at(next_inner, back_depth),
+                                position_at(inner, back_depth),
+                            },
+                        .normal = radial_normal({
+                            .first = inner,
+                            .second = next_inner,
+                            .inward = true,
+                        }),
+                        .color = inner_color,
+                    });
     }
 
     return mesh;

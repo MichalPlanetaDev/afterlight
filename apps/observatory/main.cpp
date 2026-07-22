@@ -117,6 +117,10 @@ void print_frame_smoke(const afterlight::core::BuildInfo& build,
 
     std::cout << " | indices=" << geometry.index_count;
 
+    std::cout << " | normals=" << geometry.normal_count;
+
+    std::cout << " | lighting=directional";
+
     std::cout << " | validation=" << (device.validation_enabled ? "on" : "off") << '\n';
 }
 

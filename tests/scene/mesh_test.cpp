@@ -57,6 +57,12 @@ private:
     return cross_x * cross_x + cross_y * cross_y + cross_z * cross_z;
 }
 
+[[nodiscard]] float normal_length(const afterlight::scene::Vertex& vertex) noexcept
+{
+    return std::sqrt(vertex.normal[0] * vertex.normal[0] + vertex.normal[1] * vertex.normal[1] +
+                     vertex.normal[2] * vertex.normal[2]);
+}
+
 } // namespace
 
 int main()
@@ -65,12 +71,13 @@ int main()
 
     const afterlight::scene::MeshData mesh = afterlight::scene::make_observatory_aperture();
 
-    test.expect(mesh.vertices.size() == 24, "extruded aperture has twenty-four vertices");
+    test.expect(mesh.vertices.size() == 96, "flat-shaded aperture has ninety-six vertices");
 
-    test.expect(mesh.indices.size() == 144, "extruded aperture has forty-eight triangles");
+    test.expect(mesh.indices.size() == 144, "aperture retains forty-eight triangles");
 
     bool indices_valid = true;
     bool values_valid = true;
+    bool normals_normalized = true;
     bool triangles_non_degenerate = true;
 
     float minimum_depth = std::numeric_limits<float>::max();
@@ -93,10 +100,18 @@ int main()
             values_valid = values_valid && std::isfinite(value);
         }
 
+        for (const float value : vertex.normal)
+        {
+            values_valid = values_valid && std::isfinite(value);
+        }
+
         for (const float value : vertex.color)
         {
             values_valid = values_valid && std::isfinite(value) && value >= 0.0F && value <= 1.0F;
         }
+
+        normals_normalized =
+            normals_normalized && std::fabs(normal_length(vertex) - 1.0F) < 0.0001F;
     }
 
     for (std::size_t index = 0; index + 2 < mesh.indices.size(); index += 3)
@@ -116,7 +131,9 @@ int main()
 
     test.expect(indices_valid, "all mesh indices address existing vertices");
 
-    test.expect(values_valid, "mesh positions and colors are valid");
+    test.expect(values_valid, "mesh attributes are finite and bounded");
+
+    test.expect(normals_normalized, "every surface normal has unit length");
 
     test.expect(minimum_depth < -0.1F && maximum_depth > 0.1F,
                 "aperture contains front and rear surfaces");

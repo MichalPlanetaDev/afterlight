@@ -31,7 +31,7 @@ public:
 
     void record(VkCommandBuffer command_buffer,
                 VkExtent2D extent,
-                const scene::TransformRows& transform,
+                const scene::SceneFrameData& frame_data,
                 const GpuMesh& mesh) const;
 
 private:

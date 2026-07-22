@@ -36,6 +36,7 @@ struct GeometryInfo final
 {
     std::uint32_t vertex_count{};
     std::uint32_t index_count{};
+    std::uint32_t normal_count{};
 };
 
 [[nodiscard]] VkSurfaceFormatKHR choose_surface_format(std::span<const VkSurfaceFormatKHR> formats);

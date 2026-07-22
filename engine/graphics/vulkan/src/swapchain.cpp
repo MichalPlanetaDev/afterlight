@@ -367,6 +367,7 @@ GeometryInfo SwapchainRenderer::geometry_info() const noexcept
     return {
         .vertex_count = gpu_mesh_->vertex_count(),
         .index_count = gpu_mesh_->index_count(),
+        .normal_count = gpu_mesh_->vertex_count(),
     };
 }
 
@@ -867,15 +868,17 @@ void SwapchainRenderer::record_commands(VkCommandBuffer command_buffer, std::uin
     const float elapsed_seconds =
         std::chrono::duration<float>(std::chrono::steady_clock::now() - animation_start_).count();
 
-    const scene::TransformRows transform =
-        scene::make_observatory_transform(aspect_ratio, elapsed_seconds * 0.34F);
+    const scene::SceneFrameData frame_data = scene::make_observatory_frame({
+        .aspect_ratio = aspect_ratio,
+        .rotation_radians = elapsed_seconds * 0.34F,
+    });
 
     mesh_pipeline_->record(command_buffer,
                            {
                                .width = info_.width,
                                .height = info_.height,
                            },
-                           transform,
+                           frame_data,
                            *gpu_mesh_);
 
     vkCmdEndRendering(command_buffer);
