@@ -9,6 +9,6 @@ Interactive WSLg preview:
 
     ./build/linux-clang-debug/apps/observatory/afterlight
 
-The native window renders an extruded rotating observatory aperture with depth-correct occlusion. Resizing recreates the swapchain, depth image and graphics pipeline while preserving the GPU mesh and frame infrastructure.
+The native window renders the rotating observatory aperture with depth-correct occlusion and directional surface lighting. The spectral panels react continuously as their local normals rotate relative to the fixed world-space light.
 
-Validation builds with Clang, GCC and MSVC, executes sanitizer and static-analysis configurations, verifies fifteen tests and submits three validation-clean depth-buffered frames through Mesa Vulkan.
+Validation builds with Clang, GCC and MSVC, executes sanitizer and static-analysis configurations, verifies sixteen tests and submits three validation-clean lit frames through Mesa Vulkan.

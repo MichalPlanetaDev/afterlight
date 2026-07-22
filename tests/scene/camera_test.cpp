@@ -56,16 +56,24 @@ transform_point(const afterlight::scene::TransformRows& transform,
     return result;
 }
 
+[[nodiscard]] float direction_length(const std::array<float, 4>& direction) noexcept
+{
+    return std::sqrt(direction[0] * direction[0] + direction[1] * direction[1] +
+                     direction[2] * direction[2]);
+}
+
 } // namespace
 
 int main()
 {
     TestContext test;
 
-    const afterlight::scene::TransformRows transform =
-        afterlight::scene::make_observatory_transform(16.0F / 9.0F, 0.0F);
+    const afterlight::scene::SceneFrameData frame = afterlight::scene::make_observatory_frame({
+        .aspect_ratio = 16.0F / 9.0F,
+        .rotation_radians = 0.0F,
+    });
 
-    const std::array<float, 4> clip = transform_point(transform,
+    const std::array<float, 4> clip = transform_point(frame.transform,
                                                       {
                                                           0.0F,
                                                           0.0F,
@@ -87,17 +95,34 @@ int main()
     test.expect(normalized_z >= 0.0F && normalized_z <= 1.0F,
                 "camera uses Vulkan zero-to-one depth");
 
-    const afterlight::scene::TransformRows rotated =
-        afterlight::scene::make_observatory_transform(16.0F / 9.0F, 0.7F);
+    test.expect(std::fabs(direction_length(frame.light_direction_intensity) - 1.0F) < 0.0001F,
+                "local light direction is normalized");
 
-    test.expect(std::fabs(transform.row_0[0] - rotated.row_0[0]) > 0.01F,
-                "model rotation changes the camera transform");
+    test.expect(std::fabs(direction_length(frame.view_direction_exposure) - 1.0F) < 0.0001F,
+                "local view direction is normalized");
+
+    test.expect(frame.light_direction_intensity[3] > 0.0F,
+                "directional light intensity is positive");
+
+    test.expect(frame.view_direction_exposure[3] > 0.0F, "scene exposure is positive");
+
+    const afterlight::scene::SceneFrameData rotated = afterlight::scene::make_observatory_frame({
+        .aspect_ratio = 16.0F / 9.0F,
+        .rotation_radians = 0.7F,
+    });
+
+    test.expect(std::fabs(frame.light_direction_intensity[0] -
+                          rotated.light_direction_intensity[0]) > 0.01F,
+                "object rotation changes local lighting direction");
 
     bool invalid_aspect_rejected = false;
 
     try
     {
-        static_cast<void>(afterlight::scene::make_observatory_transform(0.0F, 0.0F));
+        static_cast<void>(afterlight::scene::make_observatory_frame({
+            .aspect_ratio = 0.0F,
+            .rotation_radians = 0.0F,
+        }));
     }
     catch (const std::invalid_argument&)
     {

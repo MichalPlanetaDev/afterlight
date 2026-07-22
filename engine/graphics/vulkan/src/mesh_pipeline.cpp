@@ -140,7 +140,7 @@ MeshPipeline::~MeshPipeline()
 
 void MeshPipeline::record(VkCommandBuffer command_buffer,
                           VkExtent2D extent,
-                          const scene::TransformRows& transform,
+                          const scene::SceneFrameData& frame_data,
                           const GpuMesh& mesh) const
 {
     if (command_buffer == VK_NULL_HANDLE || pipeline_ == VK_NULL_HANDLE)
@@ -177,10 +177,10 @@ void MeshPipeline::record(VkCommandBuffer command_buffer,
 
     vkCmdPushConstants(command_buffer,
                        pipeline_layout_,
-                       VK_SHADER_STAGE_VERTEX_BIT,
+                       VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                        0,
-                       static_cast<std::uint32_t>(sizeof(scene::TransformRows)),
-                       &transform);
+                       static_cast<std::uint32_t>(sizeof(scene::SceneFrameData)),
+                       &frame_data);
 
     mesh.record(command_buffer);
 }
@@ -189,11 +189,11 @@ void MeshPipeline::create_pipeline_layout()
 {
     VkPushConstantRange push_constant{};
 
-    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
     push_constant.offset = 0;
 
-    push_constant.size = static_cast<std::uint32_t>(sizeof(scene::TransformRows));
+    push_constant.size = static_cast<std::uint32_t>(sizeof(scene::SceneFrameData));
 
     VkPipelineLayoutCreateInfo create_info{};
 
@@ -253,7 +253,7 @@ void MeshPipeline::create_graphics_pipeline(MeshPipelineFormats formats,
 
     binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    std::array<VkVertexInputAttributeDescription, 2> attributes{};
+    std::array<VkVertexInputAttributeDescription, 3> attributes{};
 
     attributes[0].location = 0;
     attributes[0].binding = 0;
@@ -267,7 +267,14 @@ void MeshPipeline::create_graphics_pipeline(MeshPipelineFormats formats,
 
     attributes[1].format = VK_FORMAT_R32G32B32_SFLOAT;
 
-    attributes[1].offset = static_cast<std::uint32_t>(offsetof(scene::Vertex, color));
+    attributes[1].offset = static_cast<std::uint32_t>(offsetof(scene::Vertex, normal));
+
+    attributes[2].location = 2;
+    attributes[2].binding = 0;
+
+    attributes[2].format = VK_FORMAT_R32G32B32_SFLOAT;
+
+    attributes[2].offset = static_cast<std::uint32_t>(offsetof(scene::Vertex, color));
 
     VkPipelineVertexInputStateCreateInfo vertex_input{};
 

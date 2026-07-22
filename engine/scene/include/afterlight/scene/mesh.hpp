@@ -10,6 +10,7 @@ namespace afterlight::scene
 struct Vertex final
 {
     std::array<float, 3> position{};
+    std::array<float, 3> normal{};
     std::array<float, 3> color{};
 };
 

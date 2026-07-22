@@ -15,6 +15,23 @@ struct TransformRows final
 
 static_assert(sizeof(TransformRows) == 16U * sizeof(float));
 
-[[nodiscard]] TransformRows make_observatory_transform(float aspect_ratio, float rotation_radians);
+struct SceneFrameParameters final
+{
+    float aspect_ratio{};
+    float rotation_radians{};
+};
+
+struct SceneFrameData final
+{
+    TransformRows transform{};
+
+    std::array<float, 4> light_direction_intensity{};
+
+    std::array<float, 4> view_direction_exposure{};
+};
+
+static_assert(sizeof(SceneFrameData) == 24U * sizeof(float));
+
+[[nodiscard]] SceneFrameData make_observatory_frame(SceneFrameParameters parameters);
 
 } // namespace afterlight::scene

@@ -2,20 +2,18 @@
 
 Afterlight separates application policy, platform integration, deterministic scene construction, backend-independent rendering contracts, shader compilation and Vulkan execution.
 
-    extruded observatory aperture
+    deterministic mesh
         |
-        +--- vertex buffer
-        +--- index buffer
-        +--- camera transform
+        +--- position
+        +--- flat surface normal
+        +--- spectral base color
                 |
-                +--- color attachment
-                +--- depth attachment
-                        |
-                        +--- dynamic rendering
-                        +--- indexed draw
+                +--- indexed GPU buffers
+                +--- depth-tested pipeline
+                +--- directional lighting
 
-The depth target owns its Vulkan image, device-local memory and image view. Format selection prefers 32-bit floating-point depth, falls back to packed depth-stencil formats and is covered by a backend policy test.
+The aperture uses unique vertices for each logical surface. This increases the mesh from twenty-four shared vertices to ninety-six face vertices while preserving forty-eight indexed triangles. Front, rear, exterior and interior surfaces therefore carry physically meaningful flat normals without smoothing across hard mechanical edges.
 
-The image begins undefined and receives one synchronization2 transition into depth-attachment layout before its first rendering scope. Swapchain recreation waits for device idleness, destroys format- and extent-dependent resources and creates a new depth target matching the presentation extent.
+The scene frame block contains the model-view-projection transform, an object-space light direction with intensity and an object-space view direction with exposure. Its total size is ninety-six bytes, remaining within Vulkan's guaranteed minimum push-constant capacity. The range is visible to both vertex and fragment shader stages.
 
-The scene mesh remains deterministic and independent of Vulkan. It contains front, rear, exterior and interior surfaces so depth testing has observable geometric work rather than merely satisfying pipeline configuration.
+The fragment stage operates in linear color. It combines hemispherical ambient response, Lambertian diffuse illumination, a compact specular lobe and a low-energy rim term before applying exponential exposure mapping. The sRGB swapchain performs the final transfer conversion.
