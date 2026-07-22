@@ -97,14 +97,25 @@ void print_frame_smoke(const afterlight::core::BuildInfo& build,
                        const afterlight::graphics::vulkan::GeometryInfo& geometry,
                        std::uint32_t presented_frames)
 {
-    std::cout << build.product_name << ' ' << build.semantic_version << " | backend=vulkan"
-              << " | device=" << device.name << " | presented=" << presented_frames
-              << " | extent=" << swapchain.width << 'x' << swapchain.height
-              << " | images=" << swapchain.image_count
-              << " | format=" << static_cast<std::uint32_t>(swapchain.format)
-              << " | geometry=observatory-aperture"
-              << " | vertices=" << geometry.vertex_count << " | indices=" << geometry.index_count
-              << " | validation=" << (device.validation_enabled ? "on" : "off") << '\n';
+    std::cout << build.product_name << ' ' << build.semantic_version << " | backend=vulkan";
+
+    std::cout << " | device=" << device.name;
+
+    std::cout << " | presented=" << presented_frames;
+
+    std::cout << " | extent=" << swapchain.width << 'x' << swapchain.height;
+
+    std::cout << " | images=" << swapchain.image_count;
+
+    std::cout << " | format=" << static_cast<std::uint32_t>(swapchain.format);
+
+    std::cout << " | geometry=observatory-aperture";
+
+    std::cout << " | vertices=" << geometry.vertex_count;
+
+    std::cout << " | indices=" << geometry.index_count;
+
+    std::cout << " | validation=" << (device.validation_enabled ? "on" : "off") << '\n';
 }
 
 [[nodiscard]] bool process_events(afterlight::platform::Window& window,
