@@ -19,3 +19,7 @@ The scene-uniform subsystem owns a descriptor-set layout, descriptor pool, one p
 The renderer waits for a frame slot's fence before writing its uniform allocation. Coherent memory requires no additional operation. A non-coherent fallback issues a mapped-memory flush before command submission.
 
 The graphics pipeline consumes the uniform descriptor layout instead of declaring a large push-constant range. This leaves push constants available for future draw-local data while establishing the descriptor infrastructure required by material textures, samplers and larger scene resources.
+
+## Device-local static geometry
+
+Static aperture geometry crosses an explicit staging boundary. CPU-authored data enters host-visible transfer-source buffers and is copied into device-local vertex and index destinations. Synchronization2 barriers establish vertex-input visibility, while fence completion protects staging and command-pool destruction. Frame-local descriptor-backed scene uniforms remain a separate lifetime domain.

@@ -13,3 +13,7 @@ Build and validate:
     ./scripts/install-linux-prerequisites.sh
     ./scripts/validate.sh all
     ./build/linux-clang-debug/apps/observatory/afterlight
+
+## Device-local mesh uploads
+
+The Vulkan backend stores deterministic aperture vertices and indices in device-local buffers. Host-visible staging allocations provide the CPU transfer path, coherent memory is preferred and non-coherent staging memory uses an explicit mapped-memory flush. A fenced one-time submission protects staging lifetime and makes transfer writes visible to vertex and index reads.

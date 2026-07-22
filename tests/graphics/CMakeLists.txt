@@ -155,3 +155,29 @@ set_tests_properties(
     PROPERTIES
         LABELS "unit;graphics;vulkan;descriptor;uniform"
 )
+
+add_executable(
+    afterlight_vulkan_mesh_upload_tests
+    mesh_upload_test.cpp
+)
+
+target_link_libraries(
+    afterlight_vulkan_mesh_upload_tests
+    PRIVATE
+        Afterlight::Vulkan
+)
+
+afterlight_configure_target(
+    afterlight_vulkan_mesh_upload_tests
+)
+
+add_test(
+    NAME afterlight.vulkan.mesh_upload
+    COMMAND afterlight_vulkan_mesh_upload_tests
+)
+
+set_tests_properties(
+    afterlight.vulkan.mesh_upload
+    PROPERTIES
+        LABELS "unit;graphics;vulkan;upload;device-local"
+)

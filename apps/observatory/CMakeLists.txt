@@ -47,7 +47,7 @@ if(BUILD_TESTING)
         PROPERTIES
             LABELS "integration;application;platform"
             PASS_REGULAR_EXPRESSION
-                "Afterlight 0[.]9[.]0-dev [|] platform=dummy [|] window=1280x720"
+                "Afterlight 0[.]10[.]0-dev [|] platform=dummy [|] window=1280x720"
             TIMEOUT 15
     )
 
@@ -62,7 +62,7 @@ if(BUILD_TESTING)
             PROPERTIES
                 LABELS "integration;application;vulkan;presentation;shader;geometry;buffer;camera;normal;lighting;descriptor;uniform"
                 PASS_REGULAR_EXPRESSION
-                    "Afterlight 0[.]9[.]0-dev.*depth=[0-9]+.*geometry=extruded-observatory-aperture.*vertices=96.*indices=144.*normals=96.*lighting=directional.*uniforms=descriptor-set.*uniform-frames=2.*validation=on"
+                    "Afterlight 0[.]10[.]0-dev.*depth=[0-9]+.*geometry=extruded-observatory-aperture.*vertices=96.*indices=144.*normals=96.*mesh-memory=device-local.*lighting=directional.*uniforms=descriptor-set.*uniform-frames=2.*validation=on"
                 TIMEOUT 30
         )
     endif()
