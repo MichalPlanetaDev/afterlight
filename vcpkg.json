@@ -1,6 +1,6 @@
 {
   "name": "afterlight",
-  "version-semver": "0.6.0",
+  "version-semver": "0.7.0",
   "builtin-baseline": "3ddaad9be959816602453ecb05533f8732464ef4",
   "dependencies": [
     "directx-dxc",

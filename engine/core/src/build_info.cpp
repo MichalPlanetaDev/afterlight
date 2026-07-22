@@ -7,8 +7,8 @@ BuildInfo current_build_info() noexcept
 {
     return {
         .product_name = "Afterlight",
-        .semantic_version = "0.6.0-dev",
-        .milestone = "GPU Mesh and Camera",
+        .semantic_version = "0.7.0-dev",
+        .milestone = "Depth-Buffered Observatory Scene",
         .revision = "local",
     };
 }

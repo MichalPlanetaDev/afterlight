@@ -111,7 +111,7 @@ void require_success(VkResult result, std::string_view operation)
 } // namespace
 
 MeshPipeline::MeshPipeline(VkDevice device,
-                           VkFormat color_format,
+                           MeshPipelineFormats formats,
                            const std::filesystem::path& shader_directory)
     : device_{device}
 {
@@ -124,7 +124,7 @@ MeshPipeline::MeshPipeline(VkDevice device,
     {
         create_pipeline_layout();
 
-        create_graphics_pipeline(color_format, shader_directory);
+        create_graphics_pipeline(formats, shader_directory);
     }
     catch (...)
     {
@@ -207,7 +207,7 @@ void MeshPipeline::create_pipeline_layout()
                     "vkCreatePipelineLayout");
 }
 
-void MeshPipeline::create_graphics_pipeline(VkFormat color_format,
+void MeshPipeline::create_graphics_pipeline(MeshPipelineFormats formats,
                                             const std::filesystem::path& shader_directory)
 {
     const std::vector<std::uint32_t> vertex_code = load_spirv(shader_directory / "mesh.vert.spv");
@@ -312,6 +312,18 @@ void MeshPipeline::create_graphics_pipeline(VkFormat color_format,
 
     multisample.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
+    VkPipelineDepthStencilStateCreateInfo depth_stencil{};
+
+    depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+
+    depth_stencil.depthTestEnable = VK_TRUE;
+    depth_stencil.depthWriteEnable = VK_TRUE;
+
+    depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
+
+    depth_stencil.depthBoundsTestEnable = VK_FALSE;
+    depth_stencil.stencilTestEnable = VK_FALSE;
+
     VkPipelineColorBlendAttachmentState color_attachment{};
 
     color_attachment.colorWriteMask =
@@ -345,7 +357,9 @@ void MeshPipeline::create_graphics_pipeline(VkFormat color_format,
 
     rendering.colorAttachmentCount = 1;
 
-    rendering.pColorAttachmentFormats = &color_format;
+    rendering.pColorAttachmentFormats = &formats.color;
+
+    rendering.depthAttachmentFormat = formats.depth;
 
     VkGraphicsPipelineCreateInfo create_info{};
 
@@ -366,6 +380,8 @@ void MeshPipeline::create_graphics_pipeline(VkFormat color_format,
     create_info.pRasterizationState = &rasterization;
 
     create_info.pMultisampleState = &multisample;
+
+    create_info.pDepthStencilState = &depth_stencil;
 
     create_info.pColorBlendState = &color_blend;
 

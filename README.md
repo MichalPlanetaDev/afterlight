@@ -4,9 +4,9 @@
 
 Afterlight is a native C++23 renderer developed around **The Last Observatory**, an interactive visual experience set inside a damaged orbital observatory reconstructing light from a vanished star.
 
-The Vulkan backend now renders deterministic indexed mesh data from project-owned GPU vertex and index buffers. A concept-specific observatory aperture replaces the earlier procedural triangle and rotates under a perspective camera built with GLM.
+The observatory aperture is now an extruded three-dimensional indexed mesh with separate front, rear, outer and inner surfaces. A device-local Vulkan depth image is recreated with the swapchain, transitioned through synchronization2 and attached to dynamic rendering.
 
-Camera matrices are converted into an explicit row representation and delivered through Vulkan push constants. The HLSL vertex stage applies the model, view and Vulkan zero-to-one projection transform before the fragment stage resolves the aperture's spectral color gradient.
+The graphics pipeline enables depth testing and depth writes against a Vulkan zero-to-one projection. As the aperture rotates, its front, rear and internal surfaces occlude correctly instead of relying on submission order.
 
 Build and validate:
 

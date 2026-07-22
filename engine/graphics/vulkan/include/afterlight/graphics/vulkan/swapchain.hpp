@@ -18,6 +18,7 @@
 namespace afterlight::graphics::vulkan
 {
 
+class DepthTarget;
 class GpuMesh;
 class MeshPipeline;
 
@@ -27,6 +28,7 @@ struct SwapchainInfo final
     std::uint32_t height{};
     std::uint32_t image_count{};
     VkFormat format{VK_FORMAT_UNDEFINED};
+    VkFormat depth_format{VK_FORMAT_UNDEFINED};
     VkPresentModeKHR present_mode{VK_PRESENT_MODE_FIFO_KHR};
 };
 
@@ -119,6 +121,7 @@ private:
     std::vector<VkFence> image_fences_;
     std::vector<rhi::TextureHandle> image_resources_;
 
+    std::unique_ptr<DepthTarget> depth_target_;
     std::unique_ptr<GpuMesh> gpu_mesh_;
     std::unique_ptr<MeshPipeline> mesh_pipeline_;
 

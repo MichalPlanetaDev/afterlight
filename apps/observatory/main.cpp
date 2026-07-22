@@ -109,7 +109,9 @@ void print_frame_smoke(const afterlight::core::BuildInfo& build,
 
     std::cout << " | format=" << static_cast<std::uint32_t>(swapchain.format);
 
-    std::cout << " | geometry=observatory-aperture";
+    std::cout << " | depth=" << static_cast<std::uint32_t>(swapchain.depth_format);
+
+    std::cout << " | geometry=extruded-observatory-aperture";
 
     std::cout << " | vertices=" << geometry.vertex_count;
 

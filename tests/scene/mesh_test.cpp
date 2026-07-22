@@ -1,8 +1,10 @@
 #include <afterlight/scene/mesh.hpp>
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 #include <string_view>
 
 namespace
@@ -30,19 +32,29 @@ private:
     int failures_{};
 };
 
-[[nodiscard]] float triangle_area_twice(const afterlight::scene::Vertex& first,
-                                        const afterlight::scene::Vertex& second,
-                                        const afterlight::scene::Vertex& third) noexcept
+[[nodiscard]] float triangle_area_squared(const afterlight::scene::Vertex& first,
+                                          const afterlight::scene::Vertex& second,
+                                          const afterlight::scene::Vertex& third) noexcept
 {
     const float first_x = second.position[0] - first.position[0];
 
     const float first_y = second.position[1] - first.position[1];
 
+    const float first_z = second.position[2] - first.position[2];
+
     const float second_x = third.position[0] - first.position[0];
 
     const float second_y = third.position[1] - first.position[1];
 
-    return first_x * second_y - first_y * second_x;
+    const float second_z = third.position[2] - first.position[2];
+
+    const float cross_x = first_y * second_z - first_z * second_y;
+
+    const float cross_y = first_z * second_x - first_x * second_z;
+
+    const float cross_z = first_x * second_y - first_y * second_x;
+
+    return cross_x * cross_x + cross_y * cross_y + cross_z * cross_z;
 }
 
 } // namespace
@@ -53,13 +65,17 @@ int main()
 
     const afterlight::scene::MeshData mesh = afterlight::scene::make_observatory_aperture();
 
-    test.expect(mesh.vertices.size() == 12, "aperture has twelve deterministic vertices");
+    test.expect(mesh.vertices.size() == 24, "extruded aperture has twenty-four vertices");
 
-    test.expect(mesh.indices.size() == 36, "aperture has twelve indexed triangles");
+    test.expect(mesh.indices.size() == 144, "extruded aperture has forty-eight triangles");
 
     bool indices_valid = true;
-    bool values_finite = true;
+    bool values_valid = true;
     bool triangles_non_degenerate = true;
+
+    float minimum_depth = std::numeric_limits<float>::max();
+
+    float maximum_depth = std::numeric_limits<float>::lowest();
 
     for (const std::uint16_t index : mesh.indices)
     {
@@ -68,14 +84,18 @@ int main()
 
     for (const afterlight::scene::Vertex& vertex : mesh.vertices)
     {
+        minimum_depth = std::min(minimum_depth, vertex.position[2]);
+
+        maximum_depth = std::max(maximum_depth, vertex.position[2]);
+
         for (const float value : vertex.position)
         {
-            values_finite = values_finite && std::isfinite(value);
+            values_valid = values_valid && std::isfinite(value);
         }
 
         for (const float value : vertex.color)
         {
-            values_finite = values_finite && std::isfinite(value) && value >= 0.0F && value <= 1.0F;
+            values_valid = values_valid && std::isfinite(value) && value >= 0.0F && value <= 1.0F;
         }
     }
 
@@ -90,13 +110,16 @@ int main()
         const afterlight::scene::Vertex& third =
             mesh.vertices[static_cast<std::size_t>(mesh.indices[index + 2])];
 
-        triangles_non_degenerate = triangles_non_degenerate &&
-                                   std::fabs(triangle_area_twice(first, second, third)) > 0.0001F;
+        triangles_non_degenerate =
+            triangles_non_degenerate && triangle_area_squared(first, second, third) > 0.000001F;
     }
 
     test.expect(indices_valid, "all mesh indices address existing vertices");
 
-    test.expect(values_finite, "mesh positions and colors are finite");
+    test.expect(values_valid, "mesh positions and colors are valid");
+
+    test.expect(minimum_depth < -0.1F && maximum_depth > 0.1F,
+                "aperture contains front and rear surfaces");
 
     test.expect(triangles_non_degenerate, "all aperture triangles have non-zero area");
 

@@ -1,26 +1,21 @@
 # Architecture
 
-Afterlight separates application policy, platform integration, scene data, backend-independent rendering contracts, shader compilation and Vulkan execution.
+Afterlight separates application policy, platform integration, deterministic scene construction, backend-independent rendering contracts, shader compilation and Vulkan execution.
 
-    deterministic aperture mesh
+    extruded observatory aperture
         |
-        +--- host-visible vertex buffer
-        +--- host-visible index buffer
+        +--- vertex buffer
+        +--- index buffer
+        +--- camera transform
                 |
-                +--- Vulkan binding
-                +--- indexed draw
-
-    model transform
-        |
-        +--- view transform
-                |
-                +--- Vulkan perspective projection
+                +--- color attachment
+                +--- depth attachment
                         |
-                        +--- push constants
-                        +--- HLSL vertex stage
+                        +--- dynamic rendering
+                        +--- indexed draw
 
-The scene module owns deterministic CPU geometry and camera mathematics without exposing GLM types through its public interface. The Vulkan backend owns buffer allocation, memory selection, mapping, synchronization and draw recording.
+The depth target owns its Vulkan image, device-local memory and image view. Format selection prefers 32-bit floating-point depth, falls back to packed depth-stencil formats and is covered by a backend policy test.
 
-The current upload path uses host-visible memory because the aperture is small and immutable. A later asset-streaming milestone can introduce staging buffers and device-local allocation without changing scene mesh data.
+The image begins undefined and receives one synchronization2 transition into depth-attachment layout before its first rendering scope. Swapchain recreation waits for device idleness, destroys format- and extent-dependent resources and creates a new depth target matching the presentation extent.
 
-Swapchain recreation rebuilds the format-dependent graphics pipeline while retaining the GPU mesh, camera state, command infrastructure, frame scheduler and backend-independent resource registry.
+The scene mesh remains deterministic and independent of Vulkan. It contains front, rear, exterior and interior surfaces so depth testing has observable geometric work rather than merely satisfying pipeline configuration.
