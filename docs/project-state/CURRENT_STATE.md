@@ -1,9 +1,13 @@
 # Current State
 
-Afterlight P11 is complete and locally validated.
+Afterlight P12 is complete and locally validated.
 
-The renderer version is `0.11.0-dev`. Every swapchain image owns a corresponding device-local depth target, and command recording selects that target using the acquired image index. The existing image fence therefore protects reuse of both the presentation image and its depth attachment.
+The renderer version is `0.12.0-dev`. The aperture samples a deterministic 64 by 64 project-owned material texture stored in an optimal-tiled device-local Vulkan image.
 
-The preserved rendering contract contains 96 vertices, 144 indices, 96 flat normals, device-local mesh buffers, directional lighting and two descriptor-backed frame-local scene uniform buffers.
+The generated sRGB colour channels describe the calibration surface and alpha carries bounded roughness. The exact payload checksum is `ad3a091625158275`.
 
-Linux validation contains 19 passing tests. Repository history and the final synchronized `main` branch remain authoritative for the merged commit identity.
+Frame-local scene uniforms remain in descriptor set zero. The persistent material image and sampler occupy descriptor set one. Upload uses coherent-preferred host-visible staging memory, an explicit non-coherent flush fallback, synchronization2 image transitions, `vkCmdCopyBufferToImage` and fenced completion.
+
+The preserved rendering contract contains 96 vertices, 144 indices, 96 flat normals, per-swapchain-image depth targets, directional lighting and two descriptor-backed scene-uniform frame buffers.
+
+Linux validation contains 20 passing tests.

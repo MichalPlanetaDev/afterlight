@@ -20,3 +20,9 @@ The Vulkan smoke contract reports `mesh-memory=device-local` while preserving 96
 ## P11 validation
 
 The Vulkan smoke contract reports `depth-ownership=per-swapchain-image`. Validation also requires the reported depth-target count to equal the runtime swapchain-image count while preserving the established geometry, lighting, device-local mesh and descriptor-uniform contracts.
+
+## P12 material validation
+
+The P12 unit contract verifies deterministic RGBA8 generation, the versioned FNV-1a checksum, semantic channel values, extent limits, ring-parameter validation and coherent-preferred memory selection with a non-coherent fallback.
+
+The Vulkan smoke path requires a 64 by 64 procedural calibration texture, device-local image memory, descriptor set one bindings and checksum `ad3a091625158275`. Full validation contains twenty tests and preserves the P11 geometry, depth, lighting and scene-uniform contracts.

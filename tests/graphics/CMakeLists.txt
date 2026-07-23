@@ -207,3 +207,29 @@ set_tests_properties(
     PROPERTIES
         LABELS "unit;graphics;vulkan;depth;swapchain;ownership"
 )
+
+add_executable(
+    afterlight_vulkan_material_texture_tests
+    material_texture_test.cpp
+)
+
+target_link_libraries(
+    afterlight_vulkan_material_texture_tests
+    PRIVATE
+        Afterlight::Vulkan
+)
+
+afterlight_configure_target(
+    afterlight_vulkan_material_texture_tests
+)
+
+add_test(
+    NAME afterlight.vulkan.material_texture
+    COMMAND afterlight_vulkan_material_texture_tests
+)
+
+set_tests_properties(
+    afterlight.vulkan.material_texture
+    PROPERTIES
+        LABELS "unit;graphics;vulkan;texture;material;upload;descriptor"
+)

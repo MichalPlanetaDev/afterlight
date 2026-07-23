@@ -1,9 +1,13 @@
 # Decisions
 
-P11 owns one depth target per swapchain image.
+P12 uses a dedicated persistent `MaterialTexture` resource.
 
-The acquired image index selects both the color image and its depth attachment. The existing image-specific fence protects reuse of that attachment pair before command recording begins.
+The object owns one device-local optimal-tiled image, its memory, image view, sampler and descriptor resources. It survives swapchain recreation and remains immutable after its upload fence completes.
 
-Every target uses the current swapchain extent and one validated depth format. Swapchain creation rejects empty or unrepresentable target counts and inconsistent formats.
+Frame-local scene data stays in descriptor set zero. Persistent material state uses descriptor set one, with the sampled image at binding zero and sampler at binding one.
 
-This milestone does not introduce multisampling, depth sampling, depth pyramids, transient graph allocation or texture-material descriptors.
+The first surface is generated with integer mathematics from versioned dimensions and ring parameters. It does not rely on imported assets or decorative random noise.
+
+RGB is stored as sRGB colour data. Alpha stores bounded roughness. Linear filtering, clamp-to-edge addressing, one mip level and disabled anisotropy are explicit current policies.
+
+P12 does not introduce an asset compiler, imported texture formats, compression, automatic mip generation, material instances or general-purpose texture management.

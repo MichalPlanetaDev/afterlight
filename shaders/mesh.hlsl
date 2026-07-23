@@ -11,6 +11,12 @@ struct SceneFrameData
 [[vk::binding(0, 0)]]
 ConstantBuffer<SceneFrameData> frame_data;
 
+[[vk::binding(0, 1)]]
+Texture2D<float4> aperture_surface;
+
+[[vk::binding(1, 1)]]
+SamplerState aperture_sampler;
+
 struct VertexInput
 {
     [[vk::location(0)]]
@@ -32,6 +38,9 @@ struct VertexOutput
 
     [[vk::location(1)]]
     float3 color : COLOR0;
+
+    [[vk::location(2)]]
+    float2 material_uv : TEXCOORD0;
 };
 
 VertexOutput vs_main(VertexInput input)
@@ -49,6 +58,11 @@ VertexOutput vs_main(VertexInput input)
 
     output.normal = input.normal;
     output.color = input.color;
+
+    output.material_uv =
+        input.position.xy *
+            0.28 +
+        0.5;
 
     return output;
 }
@@ -75,6 +89,23 @@ float4 ps_main(VertexOutput input) : SV_Target0
             light_direction +
             view_direction);
 
+    const float4 surface_sample =
+        aperture_surface.Sample(
+            aperture_sampler,
+            saturate(input.material_uv));
+
+    const float roughness =
+        saturate(surface_sample.a);
+
+    const float3 material_response =
+        0.62 +
+        surface_sample.rgb *
+            2.2;
+
+    const float3 albedo =
+        input.color *
+        material_response;
+
     const float diffuse_factor =
         saturate(
             dot(
@@ -94,13 +125,25 @@ float4 ps_main(VertexOutput input) : SV_Target0
             .light_direction_intensity
             .w;
 
+    const float specular_power =
+        lerp(
+            72.0,
+            16.0,
+            roughness);
+
     const float specular_factor =
         pow(
             saturate(
                 dot(
                     normal,
                     half_direction)),
-            48.0);
+            specular_power);
+
+    const float specular_weight =
+        lerp(
+            0.30,
+            0.08,
+            roughness);
 
     const float rim_factor =
         pow(
@@ -112,28 +155,32 @@ float4 ps_main(VertexOutput input) : SV_Target0
             3.0);
 
     const float3 diffuse =
-        input.color *
+        albedo *
         (
             hemisphere +
             diffuse_factor *
                 light_intensity);
 
-    const float specular =
+    const float3 specular =
+        lerp(
+            float3(
+                0.34,
+                0.36,
+                0.38),
+            albedo,
+            roughness * 0.35) *
         specular_factor *
-        light_intensity *
-        0.26;
+        specular_weight *
+        light_intensity;
 
     const float3 rim =
-        input.color *
+        albedo *
         rim_factor *
         0.09;
 
     const float3 linear_color =
         diffuse +
-        float3(
-            specular,
-            specular,
-            specular) +
+        specular +
         rim;
 
     const float exposure =

@@ -74,8 +74,8 @@ print(len(json.load(sys.stdin).get("tests", [])))
 '
     )"
 
-    [[ "$count" == "19" ]] || {
-        echo "Expected 19 tests, found $count"
+    [[ "$count" == "20" ]] || {
+        echo "Expected 20 tests, found $count"
         return 1
     }
 }
@@ -90,7 +90,7 @@ platform_smoke()
             --smoke
     )"
 
-    expected="Afterlight 0.11.0-dev | platform=dummy | window=1280x720"
+    expected="Afterlight 0.12.0-dev | platform=dummy | window=1280x720"
 
     [[ "$output" == "$expected" ]] || {
         echo "Expected: $expected"
@@ -122,7 +122,7 @@ output = os.environ[
 ].strip()
 
 pattern = re.compile(
-    r"Afterlight 0[.]11[.]0-dev"
+    r"Afterlight 0[.]12[.]0-dev"
     r" [|] backend=vulkan"
     r" [|] device=.+"
     r" [|] presented=3"
@@ -140,6 +140,11 @@ pattern = re.compile(
     r" [|] lighting=directional"
     r" [|] uniforms=descriptor-set"
     r" [|] uniform-frames=2"
+    r" [|] material=procedural-calibration"
+    r" [|] texture-size=64x64"
+    r" [|] texture-memory=device-local"
+    r" [|] texture-binding=set1-image0-sampler1"
+    r" [|] texture-checksum=ad3a091625158275"
     r" [|] validation=on"
 )
 

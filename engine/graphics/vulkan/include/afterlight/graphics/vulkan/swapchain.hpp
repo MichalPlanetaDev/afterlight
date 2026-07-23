@@ -20,6 +20,7 @@ namespace afterlight::graphics::vulkan
 
 class DepthTarget;
 class GpuMesh;
+class MaterialTexture;
 class MeshPipeline;
 class SceneUniforms;
 
@@ -45,6 +46,10 @@ struct SceneBindingInfo final
 {
     std::uint32_t frame_count{};
     bool descriptor_backed{};
+    bool material_sampled{};
+    std::uint32_t material_width{};
+    std::uint32_t material_height{};
+    std::uint64_t material_checksum{};
 };
 
 [[nodiscard]] VkSurfaceFormatKHR choose_surface_format(std::span<const VkSurfaceFormatKHR> formats);
@@ -138,6 +143,7 @@ private:
     std::vector<rhi::TextureHandle> image_resources_;
 
     std::unique_ptr<SceneUniforms> scene_uniforms_;
+    std::unique_ptr<MaterialTexture> material_texture_;
     std::vector<std::unique_ptr<DepthTarget>> depth_targets_;
     std::unique_ptr<GpuMesh> gpu_mesh_;
     std::unique_ptr<MeshPipeline> mesh_pipeline_;

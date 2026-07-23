@@ -6,14 +6,20 @@ Repository: `MichalPlanetaDev/afterlight`
 
 Local path: `~/projects/afterlight`
 
-Completed phase: P11 — Per-Swapchain-Image Depth Targets
+Completed phase: P12 — Procedural Material Texture
 
-Version: `0.11.0-dev`
+Version: `0.12.0-dev`
 
-Linux tests: 19/19
+Linux tests: 20/20
 
-Current renderer: Vulkan dynamic rendering with one depth target per swapchain image, device-local aperture mesh buffers, explicit flat normals, directional lighting and descriptor-backed frame-local uniforms.
+Current renderer: Vulkan dynamic rendering with one depth target per swapchain image, device-local aperture mesh buffers, deterministic sampled material texture, explicit flat normals, directional lighting and descriptor-backed frame-local uniforms.
 
-P12 has not started.
+Material texture: 64 by 64 `R8G8B8A8_SRGB`
 
-Completion marker: `P11_STATUS=PER_IMAGE_DEPTH_TARGETS_VALIDATED`
+Material checksum: `ad3a091625158275`
+
+Descriptor contract: scene set 0; material set 1, image binding 0, sampler binding 1
+
+P13 has not started.
+
+Completion marker: `P12_STATUS=PROCEDURAL_MATERIAL_TEXTURE_VALIDATED`

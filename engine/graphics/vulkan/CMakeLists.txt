@@ -7,6 +7,7 @@ add_library(
         src/device_selection.cpp
         src/depth_target.cpp
         src/gpu_mesh.cpp
+        src/material_texture.cpp
         src/mesh_upload.cpp
         src/mesh_pipeline.cpp
         src/scene_uniforms.cpp
