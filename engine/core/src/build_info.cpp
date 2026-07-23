@@ -7,8 +7,8 @@ BuildInfo current_build_info() noexcept
 {
     return {
         .product_name = "Afterlight",
-        .semantic_version = "0.13.0-dev",
-        .milestone = "Explicit Texture Coordinates",
+        .semantic_version = "0.14.0-dev",
+        .milestone = "Persistent Material Parameter Block",
         .revision = "local",
     };
 }

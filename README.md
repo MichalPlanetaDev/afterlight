@@ -31,3 +31,7 @@ Scene uniforms remain frame-local in descriptor set zero. Persistent material im
 ## Explicit aperture texture coordinates
 
 The aperture generator now authors texture coordinates with the geometry instead of reconstructing them in HLSL. Front and rear faces use deterministic planar projection, while inner and outer walls use a circumferential mapping with an explicit duplicated seam. The Vulkan vertex layout and shader interface consume the same two-component attribute contract.
+
+## Persistent aperture material parameters
+
+The aperture material now carries a repository-owned 64-byte parameter block beside its sampled image and sampler. The block preserves the established surface response while moving stable shader literals into one persistent descriptor-backed contract with explicit host and HLSL layout agreement.

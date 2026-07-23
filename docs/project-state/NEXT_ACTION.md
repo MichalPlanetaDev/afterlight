@@ -1,7 +1,7 @@
 # Next Action
 
-P14 has not started.
+P15 has not started.
 
-Before defining P14, inspect the verified P13 repository and rendering dependencies. A persistent material-parameter block is the next evidence-supported candidate because texture ownership, descriptor lifetime and geometric sampling coordinates are now explicit.
+Before defining P15, inspect the verified P14 repository and project blueprint. The next evidence-supported candidates are material-schema diagnostics and deliberate multiple-material selection, but neither should be implemented without a repository-grounded dependency review.
 
-P14 must still be selected from repository evidence before implementation. Tangent space, normal mapping, imported assets, mip generation and a general material framework remain outside P13.
+Runtime material editing, generic material graphs, tangent-space shading, normal maps, imported assets and mip generation remain outside P14.
