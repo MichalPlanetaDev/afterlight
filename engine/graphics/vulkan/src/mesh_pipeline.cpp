@@ -276,7 +276,7 @@ void MeshPipeline::create_graphics_pipeline(MeshPipelineFormats formats,
 
     binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    std::array<VkVertexInputAttributeDescription, 3> attributes{};
+    std::array<VkVertexInputAttributeDescription, 4> attributes{};
 
     attributes[0].location = 0;
     attributes[0].binding = 0;
@@ -298,6 +298,13 @@ void MeshPipeline::create_graphics_pipeline(MeshPipelineFormats formats,
     attributes[2].format = VK_FORMAT_R32G32B32_SFLOAT;
 
     attributes[2].offset = static_cast<std::uint32_t>(offsetof(scene::Vertex, color));
+
+    attributes[3].location = 3;
+    attributes[3].binding = 0;
+
+    attributes[3].format = VK_FORMAT_R32G32_SFLOAT;
+
+    attributes[3].offset = static_cast<std::uint32_t>(offsetof(scene::Vertex, texture_coordinate));
 
     VkPipelineVertexInputStateCreateInfo vertex_input{};
 

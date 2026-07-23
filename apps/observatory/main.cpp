@@ -125,6 +125,10 @@ void print_frame_smoke(const afterlight::core::BuildInfo& build,
 
     std::cout << " | normals=" << geometry.normal_count;
 
+    std::cout << " | texture-coordinates=" << geometry.texture_coordinate_count;
+
+    std::cout << " | texture-mapping=explicit-planar-radial";
+
     std::cout << " | mesh-memory=device-local";
 
     std::cout << " | lighting=directional";

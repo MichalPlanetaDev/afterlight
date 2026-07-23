@@ -385,6 +385,7 @@ GeometryInfo SwapchainRenderer::geometry_info() const noexcept
         .vertex_count = gpu_mesh_->vertex_count(),
         .index_count = gpu_mesh_->index_count(),
         .normal_count = gpu_mesh_->vertex_count(),
+        .texture_coordinate_count = gpu_mesh_->vertex_count(),
     };
 }
 

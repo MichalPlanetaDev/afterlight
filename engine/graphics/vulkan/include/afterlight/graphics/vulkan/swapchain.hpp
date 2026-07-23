@@ -40,6 +40,7 @@ struct GeometryInfo final
     std::uint32_t vertex_count{};
     std::uint32_t index_count{};
     std::uint32_t normal_count{};
+    std::uint32_t texture_coordinate_count{};
 };
 
 struct SceneBindingInfo final

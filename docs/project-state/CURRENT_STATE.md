@@ -1,13 +1,13 @@
 # Current State
 
-Afterlight P12 is complete and locally validated.
+Afterlight P13 is complete and locally validated.
 
-The renderer version is `0.12.0-dev`. The aperture samples a deterministic 64 by 64 project-owned material texture stored in an optimal-tiled device-local Vulkan image.
+The renderer version is `0.13.0-dev`. Every aperture vertex now owns an explicit two-component texture coordinate generated with its surface geometry.
 
-The generated sRGB colour channels describe the calibration surface and alpha carries bounded roughness. The exact payload checksum is `ad3a091625158275`.
+Front and rear faces use deterministic planar projection. Inner and outer radial walls use circumferential segment coordinates with depth mapped vertically. The duplicated radial seam carries zero at the first boundary and one at the final boundary without modifying geometry or index topology.
 
-Frame-local scene uniforms remain in descriptor set zero. The persistent material image and sampler occupy descriptor set one. Upload uses coherent-preferred host-visible staging memory, an explicit non-coherent flush fallback, synchronization2 image transitions, `vkCmdCopyBufferToImage` and fenced completion.
+The Vulkan vertex layout exposes the coordinate as `R32G32_SFLOAT` at location three. HLSL consumes the declared attribute directly and no longer derives material coordinates from object position.
 
-The preserved rendering contract contains 96 vertices, 144 indices, 96 flat normals, per-swapchain-image depth targets, directional lighting and two descriptor-backed scene-uniform frame buffers.
+The preserved rendering contract contains 96 vertices, 144 indices, 96 flat normals, 96 texture coordinates, a device-local procedural material texture, per-swapchain-image depth targets, directional lighting and two frame-local scene-uniform descriptor sets.
 
-Linux validation contains 20 passing tests.
+Linux validation contains 21 passing tests.

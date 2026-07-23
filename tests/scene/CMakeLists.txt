@@ -75,3 +75,29 @@ set_tests_properties(
     PROPERTIES
         LABELS "unit;scene;lighting;normal"
 )
+
+add_executable(
+    afterlight_scene_texture_coordinate_tests
+    texture_coordinate_test.cpp
+)
+
+target_link_libraries(
+    afterlight_scene_texture_coordinate_tests
+    PRIVATE
+        Afterlight::Scene
+)
+
+afterlight_configure_target(
+    afterlight_scene_texture_coordinate_tests
+)
+
+add_test(
+    NAME afterlight.scene.texture_coordinates
+    COMMAND afterlight_scene_texture_coordinate_tests
+)
+
+set_tests_properties(
+    afterlight.scene.texture_coordinates
+    PROPERTIES
+        LABELS "unit;scene;mesh;texture-coordinate;radial-mapping"
+)
