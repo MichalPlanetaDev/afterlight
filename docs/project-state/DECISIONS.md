@@ -1,9 +1,9 @@
 # Decisions
 
-P10 uses host-visible staging allocations and device-local final mesh allocations. Host-coherent staging memory is preferred, while non-coherent staging memory uses an explicit mapped-memory flush.
+P11 owns one depth target per swapchain image.
 
-The current upload is synchronous and fenced because the renderer contains one bounded static aperture mesh. It is not the final asynchronous asset-streaming architecture.
+The acquired image index selects both the color image and its depth attachment. The existing image-specific fence protects reuse of that attachment pair before command recording begins.
 
-Transfer writes become visible to vertex-attribute and index reads through synchronization2 buffer barriers recorded in the upload command buffer.
+Every target uses the current swapchain extent and one validated depth format. Swapchain creation rejects empty or unrepresentable target counts and inconsistent formats.
 
-P09 descriptor-backed frame uniforms, depth testing, explicit flat normals and directional lighting remain unchanged.
+This milestone does not introduce multisampling, depth sampling, depth pyramids, transient graph allocation or texture-material descriptors.

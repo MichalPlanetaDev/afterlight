@@ -181,3 +181,29 @@ set_tests_properties(
     PROPERTIES
         LABELS "unit;graphics;vulkan;upload;device-local"
 )
+
+add_executable(
+    afterlight_vulkan_depth_target_policy_tests
+    depth_target_policy_test.cpp
+)
+
+target_link_libraries(
+    afterlight_vulkan_depth_target_policy_tests
+    PRIVATE
+        Afterlight::Vulkan
+)
+
+afterlight_configure_target(
+    afterlight_vulkan_depth_target_policy_tests
+)
+
+add_test(
+    NAME afterlight.vulkan.depth_target_policy
+    COMMAND afterlight_vulkan_depth_target_policy_tests
+)
+
+set_tests_properties(
+    afterlight.vulkan.depth_target_policy
+    PROPERTIES
+        LABELS "unit;graphics;vulkan;depth;swapchain;ownership"
+)
