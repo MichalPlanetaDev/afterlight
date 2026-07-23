@@ -21,3 +21,9 @@ The Vulkan backend stores deterministic aperture vertices and indices in device-
 ## Per-image depth ownership
 
 Every swapchain image owns a matching device-local depth target. The acquired image index selects both attachments, and the existing image fence protects their reuse. This removes writable depth sharing between independently in-flight frames.
+
+## Procedural material texture
+
+The aperture now samples a project-owned calibration surface generated deterministically with integer mathematics. Its sRGB colour channels describe restrained steel, alloy and optical accents while alpha carries bounded roughness. The immutable image resides in device-local memory and is uploaded through a fenced staging transfer before rendering begins.
+
+Scene uniforms remain frame-local in descriptor set zero. Persistent material image and sampler state occupy descriptor set one, keeping ownership and update frequency explicit.

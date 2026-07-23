@@ -1,6 +1,7 @@
 #include <afterlight/graphics/vulkan/barrier.hpp>
 #include <afterlight/graphics/vulkan/depth_target.hpp>
 #include <afterlight/graphics/vulkan/gpu_mesh.hpp>
+#include <afterlight/graphics/vulkan/material_texture.hpp>
 #include <afterlight/graphics/vulkan/mesh_pipeline.hpp>
 #include <afterlight/graphics/vulkan/scene_uniforms.hpp>
 #include <afterlight/graphics/vulkan/swapchain.hpp>
@@ -232,6 +233,9 @@ SwapchainRenderer::SwapchainRenderer(VulkanContext& context,
         scene_uniforms_ =
             std::make_unique<SceneUniforms>(context_, static_cast<std::uint32_t>(frames_in_flight));
 
+        material_texture_ =
+            std::make_unique<MaterialTexture>(context_, make_aperture_material_texture());
+
         gpu_mesh_ = std::make_unique<GpuMesh>(context_, scene::make_observatory_aperture());
 
         if (!recreate_swapchain(window))
@@ -243,6 +247,7 @@ SwapchainRenderer::SwapchainRenderer(VulkanContext& context,
     {
         destroy_swapchain();
         gpu_mesh_.reset();
+        material_texture_.reset();
         scene_uniforms_.reset();
         destroy_frame_resources();
         destroy_command_resources();
@@ -260,6 +265,7 @@ SwapchainRenderer::~SwapchainRenderer()
 
     destroy_swapchain();
     gpu_mesh_.reset();
+    material_texture_.reset();
     scene_uniforms_.reset();
     destroy_frame_resources();
     destroy_command_resources();
@@ -384,7 +390,7 @@ GeometryInfo SwapchainRenderer::geometry_info() const noexcept
 
 SceneBindingInfo SwapchainRenderer::scene_binding_info() const noexcept
 {
-    if (scene_uniforms_ == nullptr)
+    if (scene_uniforms_ == nullptr || material_texture_ == nullptr)
     {
         return {};
     }
@@ -392,6 +398,10 @@ SceneBindingInfo SwapchainRenderer::scene_binding_info() const noexcept
     return {
         .frame_count = scene_uniforms_->frame_count(),
         .descriptor_backed = true,
+        .material_sampled = true,
+        .material_width = material_texture_->width(),
+        .material_height = material_texture_->height(),
+        .material_checksum = material_texture_->checksum(),
     };
 }
 
@@ -619,6 +629,7 @@ bool SwapchainRenderer::create_swapchain(const platform::Window& window)
                                                         .depth = info_.depth_format,
                                                     },
                                                     scene_uniforms_->descriptor_set_layout(),
+                                                    material_texture_->descriptor_set_layout(),
                                                     shader_directory_);
 
     return true;
@@ -830,7 +841,7 @@ void SwapchainRenderer::record_commands(RecordFrameParameters parameters)
     DepthTarget* const depth_target = depth_targets_[resource_index].get();
 
     if (mesh_pipeline_ == nullptr || gpu_mesh_ == nullptr || depth_target == nullptr ||
-        scene_uniforms_ == nullptr)
+        scene_uniforms_ == nullptr || material_texture_ == nullptr)
     {
         throw std::runtime_error{"descriptor-backed rendering resources are unavailable"};
     }
@@ -944,6 +955,7 @@ void SwapchainRenderer::record_commands(RecordFrameParameters parameters)
                                .height = info_.height,
                            },
                            scene_uniforms_->descriptor_set(parameters.frame_slot),
+                           material_texture_->descriptor_set(),
                            *gpu_mesh_);
 
     vkCmdEndRendering(command_buffer);

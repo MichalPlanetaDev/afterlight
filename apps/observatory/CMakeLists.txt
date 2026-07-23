@@ -47,7 +47,7 @@ if(BUILD_TESTING)
         PROPERTIES
             LABELS "integration;application;platform"
             PASS_REGULAR_EXPRESSION
-                "Afterlight 0[.]11[.]0-dev [|] platform=dummy [|] window=1280x720"
+                "Afterlight 0[.]12[.]0-dev [|] platform=dummy [|] window=1280x720"
             TIMEOUT 15
     )
 
@@ -60,9 +60,9 @@ if(BUILD_TESTING)
         set_tests_properties(
             afterlight.app.vulkan_geometry_smoke
             PROPERTIES
-                LABELS "integration;application;vulkan;presentation;shader;geometry;buffer;camera;normal;lighting;descriptor;uniform;depth-ownership"
+                LABELS "integration;application;vulkan;presentation;shader;geometry;buffer;camera;normal;lighting;descriptor;uniform;depth-ownership;texture;material;sampler"
                 PASS_REGULAR_EXPRESSION
-                    "Afterlight 0[.]11[.]0-dev.*depth=[0-9]+.*depth-targets=[0-9]+.*depth-ownership=per-swapchain-image.*geometry=extruded-observatory-aperture.*vertices=96.*indices=144.*normals=96.*mesh-memory=device-local.*lighting=directional.*uniforms=descriptor-set.*uniform-frames=2.*validation=on"
+                    "Afterlight 0[.]12[.]0-dev.*depth=[0-9]+.*depth-targets=[0-9]+.*depth-ownership=per-swapchain-image.*geometry=extruded-observatory-aperture.*vertices=96.*indices=144.*normals=96.*mesh-memory=device-local.*lighting=directional.*uniforms=descriptor-set.*uniform-frames=2.*material=procedural-calibration.*texture-size=64x64.*texture-memory=device-local.*texture-binding=set1-image0-sampler1.*texture-checksum=ad3a091625158275.*validation=on"
                 TIMEOUT 30
         )
     endif()

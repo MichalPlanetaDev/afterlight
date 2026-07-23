@@ -20,6 +20,7 @@ public:
     MeshPipeline(VkDevice device,
                  MeshPipelineFormats formats,
                  VkDescriptorSetLayout scene_set_layout,
+                 VkDescriptorSetLayout material_set_layout,
                  const std::filesystem::path& shader_directory);
 
     ~MeshPipeline();
@@ -32,10 +33,12 @@ public:
     void record(VkCommandBuffer command_buffer,
                 VkExtent2D extent,
                 VkDescriptorSet scene_descriptor_set,
+                VkDescriptorSet material_descriptor_set,
                 const GpuMesh& mesh) const;
 
 private:
-    void create_pipeline_layout(VkDescriptorSetLayout scene_set_layout);
+    void create_pipeline_layout(VkDescriptorSetLayout scene_set_layout,
+                                VkDescriptorSetLayout material_set_layout);
 
     void create_graphics_pipeline(MeshPipelineFormats formats,
                                   const std::filesystem::path& shader_directory);

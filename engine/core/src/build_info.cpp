@@ -7,8 +7,8 @@ BuildInfo current_build_info() noexcept
 {
     return {
         .product_name = "Afterlight",
-        .semantic_version = "0.11.0-dev",
-        .milestone = "Per-Swapchain-Image Depth Targets",
+        .semantic_version = "0.12.0-dev",
+        .milestone = "Procedural Material Texture",
         .revision = "local",
     };
 }

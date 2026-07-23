@@ -27,3 +27,9 @@ Static aperture geometry crosses an explicit staging boundary. CPU-authored data
 ## Per-swapchain-image depth targets
 
 The swapchain owns one depth target per presentation image. Command recording selects the depth attachment with the acquired image index, so the image-specific fence protects color and depth reuse as one ownership unit. Resize recreation destroys and rebuilds the complete attachment set.
+
+## Persistent material binding
+
+`MaterialTexture` is a cohesive Vulkan lifetime owner for the aperture's generated surface. It owns the device-local image allocation, image view, sampler and persistent descriptor resources. The object is created once with the renderer and survives swapchain recreation because neither its extent nor shader binding depends on presentation state.
+
+The scene descriptor set remains set zero and contains frame-local uniform data. The material descriptor set is set one, with the sampled image at binding zero and sampler at binding one. The mesh pipeline declares both layouts and binds both sets in one command.

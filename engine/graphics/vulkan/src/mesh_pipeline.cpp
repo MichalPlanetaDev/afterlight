@@ -113,6 +113,7 @@ void require_success(VkResult result, std::string_view operation)
 MeshPipeline::MeshPipeline(VkDevice device,
                            MeshPipelineFormats formats,
                            VkDescriptorSetLayout scene_set_layout,
+                           VkDescriptorSetLayout material_set_layout,
                            const std::filesystem::path& shader_directory)
     : device_{device}
 {
@@ -126,9 +127,14 @@ MeshPipeline::MeshPipeline(VkDevice device,
         throw std::invalid_argument{"mesh pipeline requires a scene descriptor layout"};
     }
 
+    if (material_set_layout == VK_NULL_HANDLE)
+    {
+        throw std::invalid_argument{"mesh pipeline requires a material descriptor layout"};
+    }
+
     try
     {
-        create_pipeline_layout(scene_set_layout);
+        create_pipeline_layout(scene_set_layout, material_set_layout);
 
         create_graphics_pipeline(formats, shader_directory);
     }
@@ -147,6 +153,7 @@ MeshPipeline::~MeshPipeline()
 void MeshPipeline::record(VkCommandBuffer command_buffer,
                           VkExtent2D extent,
                           VkDescriptorSet scene_descriptor_set,
+                          VkDescriptorSet material_descriptor_set,
                           const GpuMesh& mesh) const
 {
     if (command_buffer == VK_NULL_HANDLE || pipeline_ == VK_NULL_HANDLE)
@@ -159,15 +166,17 @@ void MeshPipeline::record(VkCommandBuffer command_buffer,
         throw std::invalid_argument{"mesh pipeline requires a scene descriptor set"};
     }
 
+    if (material_descriptor_set == VK_NULL_HANDLE)
+    {
+        throw std::invalid_argument{"mesh pipeline requires a material descriptor set"};
+    }
+
     VkViewport viewport{};
 
     viewport.x = 0.0F;
     viewport.y = 0.0F;
-
     viewport.width = static_cast<float>(extent.width);
-
     viewport.height = static_cast<float>(extent.height);
-
     viewport.minDepth = 0.0F;
     viewport.maxDepth = 1.0F;
 
@@ -180,33 +189,42 @@ void MeshPipeline::record(VkCommandBuffer command_buffer,
         .extent = extent,
     };
 
-    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+    vkCmdSetViewport(command_buffer, 0U, 1U, &viewport);
 
-    vkCmdSetScissor(command_buffer, 0, 1, &scissor);
+    vkCmdSetScissor(command_buffer, 0U, 1U, &scissor);
 
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
+
+    const std::array<VkDescriptorSet, 2> descriptor_sets{
+        scene_descriptor_set,
+        material_descriptor_set,
+    };
 
     vkCmdBindDescriptorSets(command_buffer,
                             VK_PIPELINE_BIND_POINT_GRAPHICS,
                             pipeline_layout_,
-                            0,
-                            1,
-                            &scene_descriptor_set,
-                            0,
+                            0U,
+                            static_cast<std::uint32_t>(descriptor_sets.size()),
+                            descriptor_sets.data(),
+                            0U,
                             nullptr);
 
     mesh.record(command_buffer);
 }
 
-void MeshPipeline::create_pipeline_layout(VkDescriptorSetLayout scene_set_layout)
+void MeshPipeline::create_pipeline_layout(VkDescriptorSetLayout scene_set_layout,
+                                          VkDescriptorSetLayout material_set_layout)
 {
+    const std::array<VkDescriptorSetLayout, 2> layouts{
+        scene_set_layout,
+        material_set_layout,
+    };
+
     VkPipelineLayoutCreateInfo create_info{};
 
     create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-
-    create_info.setLayoutCount = 1;
-
-    create_info.pSetLayouts = &scene_set_layout;
+    create_info.setLayoutCount = static_cast<std::uint32_t>(layouts.size());
+    create_info.pSetLayouts = layouts.data();
 
     require_success(vkCreatePipelineLayout(device_, &create_info, nullptr, &pipeline_layout_),
                     "vkCreatePipelineLayout");

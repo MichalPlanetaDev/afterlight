@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
+#include <iomanip>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -132,6 +133,16 @@ void print_frame_smoke(const afterlight::core::BuildInfo& build,
 
     std::cout << " | uniform-frames=" << bindings.frame_count;
 
+    std::cout << (bindings.material_sampled ? " | material=procedural-calibration"
+                                            : " | material=unavailable");
+
+    std::cout << " | texture-size=" << bindings.material_width << 'x' << bindings.material_height;
+
+    std::cout << " | texture-memory=device-local";
+
+    std::cout << " | texture-binding=set1-image0-sampler1";
+
+    std::cout << " | texture-checksum=" << std::hex << bindings.material_checksum << std::dec;
     std::cout << " | validation=" << (device.validation_enabled ? "on" : "off") << '\n';
 }
 
