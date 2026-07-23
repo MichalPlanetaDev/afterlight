@@ -400,6 +400,8 @@ SceneBindingInfo SwapchainRenderer::scene_binding_info() const noexcept
         .frame_count = scene_uniforms_->frame_count(),
         .descriptor_backed = true,
         .material_sampled = true,
+        .material_parameterized = true,
+        .material_parameter_bytes = material_texture_->parameter_byte_size(),
         .material_width = material_texture_->width(),
         .material_height = material_texture_->height(),
         .material_checksum = material_texture_->checksum(),

@@ -32,3 +32,9 @@ The Vulkan smoke path requires a 64 by 64 procedural calibration texture, device
 The scene contract verifies deterministic generation, finite normalized coordinates, planar mapping on front and rear surfaces, radial mapping on both wall classes and an explicit zero-to-one seam across duplicated geometry.
 
 The Vulkan smoke path requires ninety-six explicit coordinates and the `explicit-planar-radial` mapping marker. Full Linux validation contains twenty-one tests and preserves every P12 texture, descriptor, geometry, depth and lighting contract.
+
+## P14 material parameter validation
+
+The material parameter regression test verifies the 64-byte host layout, sixteen-byte alignment, deterministic default bytes, preserved P13 response constants, bounded domains and descriptor binding policy.
+
+The Vulkan smoke contract requires a persistent material uniform buffer at set one binding two while preserving the P12 texture checksum, image binding zero, sampler binding one and the P13 texture-coordinate contract.

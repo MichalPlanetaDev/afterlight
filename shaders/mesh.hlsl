@@ -8,6 +8,14 @@ struct SceneFrameData
     float4 view_direction_exposure;
 };
 
+struct ApertureMaterialParameters
+{
+    float4 surface_response;
+    float4 specular_response;
+    float4 surface_accents;
+    float4 specular_tint;
+};
+
 [[vk::binding(0, 0)]]
 ConstantBuffer<SceneFrameData> frame_data;
 
@@ -16,6 +24,10 @@ Texture2D<float4> aperture_surface;
 
 [[vk::binding(1, 1)]]
 SamplerState aperture_sampler;
+
+[[vk::binding(2, 1)]]
+ConstantBuffer<ApertureMaterialParameters>
+    aperture_material;
 
 struct VertexInput
 {
@@ -99,9 +111,9 @@ float4 ps_main(VertexOutput input) : SV_Target0
         saturate(surface_sample.a);
 
     const float3 material_response =
-        0.62 +
+        aperture_material.surface_response.x +
         surface_sample.rgb *
-            2.2;
+            aperture_material.surface_response.y;
 
     const float3 albedo =
         input.color *
@@ -115,8 +127,8 @@ float4 ps_main(VertexOutput input) : SV_Target0
 
     const float hemisphere =
         lerp(
-            0.075,
-            0.19,
+            aperture_material.surface_response.z,
+            aperture_material.surface_response.w,
             saturate(
                 normal.y * 0.5 +
                 0.5));
@@ -128,8 +140,8 @@ float4 ps_main(VertexOutput input) : SV_Target0
 
     const float specular_power =
         lerp(
-            72.0,
-            16.0,
+            aperture_material.specular_response.x,
+            aperture_material.specular_response.y,
             roughness);
 
     const float specular_factor =
@@ -142,8 +154,8 @@ float4 ps_main(VertexOutput input) : SV_Target0
 
     const float specular_weight =
         lerp(
-            0.30,
-            0.08,
+            aperture_material.specular_response.z,
+            aperture_material.specular_response.w,
             roughness);
 
     const float rim_factor =
@@ -153,7 +165,7 @@ float4 ps_main(VertexOutput input) : SV_Target0
                     dot(
                         normal,
                         view_direction)),
-            3.0);
+            aperture_material.surface_accents.y);
 
     const float3 diffuse =
         albedo *
@@ -164,12 +176,10 @@ float4 ps_main(VertexOutput input) : SV_Target0
 
     const float3 specular =
         lerp(
-            float3(
-                0.34,
-                0.36,
-                0.38),
+            aperture_material.specular_tint.xyz,
             albedo,
-            roughness * 0.35) *
+            roughness *
+                aperture_material.surface_accents.x) *
         specular_factor *
         specular_weight *
         light_intensity;
@@ -177,7 +187,7 @@ float4 ps_main(VertexOutput input) : SV_Target0
     const float3 rim =
         albedo *
         rim_factor *
-        0.09;
+        aperture_material.surface_accents.z;
 
     const float3 linear_color =
         diffuse +

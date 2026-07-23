@@ -146,6 +146,13 @@ void print_frame_smoke(const afterlight::core::BuildInfo& build,
 
     std::cout << " | texture-binding=set1-image0-sampler1";
 
+    std::cout << (bindings.material_parameterized ? " | material-parameters=persistent-ubo"
+                                                  : " | material-parameters=unavailable");
+
+    std::cout << " | material-parameter-bytes=" << bindings.material_parameter_bytes;
+
+    std::cout << " | material-parameter-binding=set1-buffer2";
+
     std::cout << " | texture-checksum=" << std::hex << bindings.material_checksum << std::dec;
     std::cout << " | validation=" << (device.validation_enabled ? "on" : "off") << '\n';
 }

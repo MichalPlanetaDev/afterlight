@@ -233,3 +233,29 @@ set_tests_properties(
     PROPERTIES
         LABELS "unit;graphics;vulkan;texture;material;upload;descriptor"
 )
+
+add_executable(
+    afterlight_vulkan_material_parameter_tests
+    material_parameters_test.cpp
+)
+
+target_link_libraries(
+    afterlight_vulkan_material_parameter_tests
+    PRIVATE
+        Afterlight::Vulkan
+)
+
+afterlight_configure_target(
+    afterlight_vulkan_material_parameter_tests
+)
+
+add_test(
+    NAME afterlight.vulkan.material_parameters
+    COMMAND afterlight_vulkan_material_parameter_tests
+)
+
+set_tests_properties(
+    afterlight.vulkan.material_parameters
+    PROPERTIES
+        LABELS "unit;graphics;vulkan;material;descriptor;uniform-buffer;persistent"
+)

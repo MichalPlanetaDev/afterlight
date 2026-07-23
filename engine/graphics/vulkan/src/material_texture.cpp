@@ -1,6 +1,7 @@
 #include <afterlight/graphics/vulkan/material_texture.hpp>
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -510,6 +511,47 @@ choose_texture_memory_type(const VkPhysicalDeviceMemoryProperties& properties,
     return std::nullopt;
 }
 
+bool valid_aperture_material_parameters(const ApertureMaterialParameters& parameters) noexcept
+{
+    const auto finite_register = [](const std::array<float, 4>& values) noexcept
+    {
+        return std::all_of(values.begin(),
+                           values.end(),
+                           [](float value) noexcept { return std::isfinite(value); });
+    };
+
+    if (!finite_register(parameters.surface_response) ||
+        !finite_register(parameters.specular_response) ||
+        !finite_register(parameters.surface_accents) || !finite_register(parameters.specular_tint))
+    {
+        return false;
+    }
+
+    const auto& surface = parameters.surface_response;
+    const auto& specular = parameters.specular_response;
+    const auto& accents = parameters.surface_accents;
+    const auto& tint = parameters.specular_tint;
+
+    const bool surface_response_valid =
+        surface[0] >= 0.0F && surface[0] <= 2.0F && surface[1] >= 0.0F && surface[1] <= 8.0F &&
+        surface[2] >= 0.0F && surface[2] <= surface[3] && surface[3] <= 1.0F;
+
+    const bool specular_response_valid = specular[0] >= 1.0F && specular[0] <= 256.0F &&
+                                         specular[1] >= 1.0F && specular[1] <= specular[0] &&
+                                         specular[2] >= 0.0F && specular[2] <= 1.0F &&
+                                         specular[3] >= 0.0F && specular[3] <= specular[2];
+
+    const bool accent_response_valid =
+        accents[0] >= 0.0F && accents[0] <= 1.0F && accents[1] >= 1.0F && accents[1] <= 16.0F &&
+        accents[2] >= 0.0F && accents[2] <= 1.0F && accents[3] == 0.0F;
+
+    const bool tint_valid = tint[0] >= 0.0F && tint[0] <= 1.0F && tint[1] >= 0.0F &&
+                            tint[1] <= 1.0F && tint[2] >= 0.0F && tint[2] <= 1.0F &&
+                            tint[3] == 0.0F;
+
+    return surface_response_valid && specular_response_valid && accent_response_valid && tint_valid;
+}
+
 MaterialTextureData make_aperture_material_texture(MaterialTextureSpec specification)
 {
     const std::size_t byte_count =
@@ -633,9 +675,18 @@ MaterialTextureData make_aperture_material_texture(MaterialTextureSpec specifica
     return texture;
 }
 
-MaterialTexture::MaterialTexture(VulkanContext& context, const MaterialTextureData& data)
-    : context_{context}
+MaterialTexture::MaterialTexture(VulkanContext& context,
+                                 const MaterialTextureData& data,
+                                 ApertureMaterialParameters parameters)
+    : context_{context}, parameters_{parameters}
 {
+    if (!valid_aperture_material_parameters(parameters_))
+    {
+        throw std::invalid_argument{
+            "aperture material parameters are outside the supported domain",
+        };
+    }
+
     const std::size_t expected_size = checked_texture_byte_count(data.width, data.height);
 
     if (data.texels.size() != expected_size)
@@ -661,6 +712,7 @@ MaterialTexture::MaterialTexture(VulkanContext& context, const MaterialTextureDa
         create_image_and_upload(data);
         create_image_view();
         create_sampler();
+        create_parameter_buffer();
         create_descriptor_resources();
     }
     catch (...)
@@ -698,6 +750,16 @@ std::uint32_t MaterialTexture::height() const noexcept
 std::uint64_t MaterialTexture::checksum() const noexcept
 {
     return checksum_;
+}
+
+std::uint32_t MaterialTexture::parameter_byte_size() const noexcept
+{
+    return static_cast<std::uint32_t>(sizeof(ApertureMaterialParameters));
+}
+
+const ApertureMaterialParameters& MaterialTexture::parameters() const noexcept
+{
+    return parameters_;
 }
 
 void MaterialTexture::create_image_and_upload(const MaterialTextureData& data)
@@ -856,9 +918,93 @@ void MaterialTexture::create_sampler()
                     "vkCreateSampler(material texture)");
 }
 
+void MaterialTexture::create_parameter_buffer()
+{
+    const VkDeviceSize parameter_size =
+        static_cast<VkDeviceSize>(sizeof(ApertureMaterialParameters));
+
+    VkBufferCreateInfo buffer_info{};
+
+    buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buffer_info.size = parameter_size;
+    buffer_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    require_success(vkCreateBuffer(context_.device(), &buffer_info, nullptr, &parameter_buffer_),
+                    "vkCreateBuffer(material parameters)");
+
+    VkMemoryRequirements requirements{};
+
+    vkGetBufferMemoryRequirements(context_.device(), parameter_buffer_, &requirements);
+
+    VkPhysicalDeviceMemoryProperties properties{};
+
+    vkGetPhysicalDeviceMemoryProperties(context_.physical_device(), &properties);
+
+    const auto selection =
+        choose_texture_memory_type(properties,
+                                   {
+                                       .type_bits = requirements.memoryTypeBits,
+                                       .required = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                       .preferred = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                   });
+
+    if (!selection.has_value())
+    {
+        throw std::runtime_error{
+            "Vulkan device exposes no host-visible "
+            "material parameter memory",
+        };
+    }
+
+    VkMemoryAllocateInfo allocation_info{};
+
+    allocation_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocation_info.allocationSize = requirements.size;
+    allocation_info.memoryTypeIndex = selection->index;
+
+    require_success(
+        vkAllocateMemory(context_.device(), &allocation_info, nullptr, &parameter_memory_),
+        "vkAllocateMemory(material parameters)");
+
+    require_success(vkBindBufferMemory(context_.device(), parameter_buffer_, parameter_memory_, 0U),
+                    "vkBindBufferMemory(material parameters)");
+
+    void* mapped = nullptr;
+
+    require_success(
+        vkMapMemory(context_.device(), parameter_memory_, 0U, requirements.size, 0U, &mapped),
+        "vkMapMemory(material parameters)");
+
+    std::memcpy(mapped, &parameters_, sizeof(parameters_));
+
+    if (!selection->coherent)
+    {
+        VkMappedMemoryRange range{};
+
+        range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+        range.memory = parameter_memory_;
+        range.offset = 0U;
+        range.size = VK_WHOLE_SIZE;
+
+        const VkResult flush_result = vkFlushMappedMemoryRanges(context_.device(), 1U, &range);
+
+        if (flush_result != VK_SUCCESS)
+        {
+            vkUnmapMemory(context_.device(), parameter_memory_);
+
+            throw vulkan_failure("vkFlushMappedMemoryRanges"
+                                 "(material parameters)",
+                                 flush_result);
+        }
+    }
+
+    vkUnmapMemory(context_.device(), parameter_memory_);
+}
+
 void MaterialTexture::create_descriptor_resources()
 {
-    std::array<VkDescriptorSetLayoutBinding, 2> bindings{};
+    std::array<VkDescriptorSetLayoutBinding, 3> bindings{};
 
     bindings[0].binding = material_image_binding;
     bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -870,6 +1016,11 @@ void MaterialTexture::create_descriptor_resources()
     bindings[1].descriptorCount = 1U;
     bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
+    bindings[2].binding = material_parameter_binding;
+    bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[2].descriptorCount = 1U;
+    bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
     VkDescriptorSetLayoutCreateInfo layout_info{};
 
     layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -880,13 +1031,16 @@ void MaterialTexture::create_descriptor_resources()
                         context_.device(), &layout_info, nullptr, &descriptor_set_layout_),
                     "vkCreateDescriptorSetLayout(material)");
 
-    std::array<VkDescriptorPoolSize, 2> pool_sizes{};
+    std::array<VkDescriptorPoolSize, 3> pool_sizes{};
 
     pool_sizes[0].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     pool_sizes[0].descriptorCount = 1U;
 
     pool_sizes[1].type = VK_DESCRIPTOR_TYPE_SAMPLER;
     pool_sizes[1].descriptorCount = 1U;
+
+    pool_sizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    pool_sizes[2].descriptorCount = 1U;
 
     VkDescriptorPoolCreateInfo pool_info{};
 
@@ -918,7 +1072,13 @@ void MaterialTexture::create_descriptor_resources()
 
     sampler_info.sampler = sampler_;
 
-    std::array<VkWriteDescriptorSet, 2> writes{};
+    VkDescriptorBufferInfo parameter_info{};
+
+    parameter_info.buffer = parameter_buffer_;
+    parameter_info.offset = 0U;
+    parameter_info.range = static_cast<VkDeviceSize>(sizeof(ApertureMaterialParameters));
+
+    std::array<VkWriteDescriptorSet, 3> writes{};
 
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[0].dstSet = descriptor_set_;
@@ -933,6 +1093,13 @@ void MaterialTexture::create_descriptor_resources()
     writes[1].descriptorCount = 1U;
     writes[1].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
     writes[1].pImageInfo = &sampler_info;
+
+    writes[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writes[2].dstSet = descriptor_set_;
+    writes[2].dstBinding = material_parameter_binding;
+    writes[2].descriptorCount = 1U;
+    writes[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    writes[2].pBufferInfo = &parameter_info;
 
     vkUpdateDescriptorSets(
         context_.device(), static_cast<std::uint32_t>(writes.size()), writes.data(), 0U, nullptr);
@@ -954,6 +1121,20 @@ void MaterialTexture::reset() noexcept
         vkDestroyDescriptorSetLayout(context_.device(), descriptor_set_layout_, nullptr);
 
         descriptor_set_layout_ = VK_NULL_HANDLE;
+    }
+
+    if (parameter_buffer_ != VK_NULL_HANDLE)
+    {
+        vkDestroyBuffer(context_.device(), parameter_buffer_, nullptr);
+
+        parameter_buffer_ = VK_NULL_HANDLE;
+    }
+
+    if (parameter_memory_ != VK_NULL_HANDLE)
+    {
+        vkFreeMemory(context_.device(), parameter_memory_, nullptr);
+
+        parameter_memory_ = VK_NULL_HANDLE;
     }
 
     if (sampler_ != VK_NULL_HANDLE)
@@ -987,6 +1168,7 @@ void MaterialTexture::reset() noexcept
     width_ = 0U;
     height_ = 0U;
     checksum_ = 0U;
+    parameters_ = {};
 }
 
 } // namespace afterlight::graphics::vulkan

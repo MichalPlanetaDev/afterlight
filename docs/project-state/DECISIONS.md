@@ -1,11 +1,11 @@
 # Decisions
 
-P13 makes texture coordinates part of the scene vertex contract.
+P14 makes stable aperture surface response explicit persistent material state.
 
-Planar front and rear faces map their existing object-space aperture positions into zero-to-one coordinates. Inner and outer walls map segment boundaries across the horizontal texture interval and front-to-back depth across the vertical interval.
+`ApertureMaterialParameters` occupies four sixteen-byte registers and preserves the P13 visual constants as validated defaults. Unsupported ranges, non-finite values, inverted response relationships and non-zero reserved components are rejected.
 
-The final radial boundary remains one instead of wrapping to zero. Duplicated seam vertices therefore express both texture edges while retaining identical geometric positions.
+Material descriptor set one retains sampled image binding zero and sampler binding one. A persistent uniform buffer occupies binding two.
 
-The Vulkan vertex input uses location three with `R32G32_SFLOAT`. The shader consumes this attribute directly.
+Material parameters follow material lifetime and are not duplicated per frame. Scene transforms, light direction, light intensity, view direction and exposure remain frame-local in descriptor set zero.
 
-P13 does not alter aperture topology, material texture generation, descriptor ownership, GPU upload policy, depth ownership or lighting.
+P14 does not add runtime material editing, multiple material instances, a generic material framework, tangent space, normal mapping, imported assets or mip generation.

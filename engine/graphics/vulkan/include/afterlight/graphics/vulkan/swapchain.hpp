@@ -48,6 +48,8 @@ struct SceneBindingInfo final
     std::uint32_t frame_count{};
     bool descriptor_backed{};
     bool material_sampled{};
+    bool material_parameterized{};
+    std::uint32_t material_parameter_bytes{};
     std::uint32_t material_width{};
     std::uint32_t material_height{};
     std::uint64_t material_checksum{};

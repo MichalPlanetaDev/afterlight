@@ -1,13 +1,15 @@
 # Current State
 
-Afterlight P13 is complete and locally validated.
+Afterlight P14 is complete and locally validated.
 
-The renderer version is `0.13.0-dev`. Every aperture vertex now owns an explicit two-component texture coordinate generated with its surface geometry.
+The renderer version is `0.14.0-dev`. The persistent aperture material now owns a 64-byte, sixteen-byte-aligned parameter block in addition to its procedural sampled image and sampler.
 
-Front and rear faces use deterministic planar projection. Inner and outer radial walls use circumferential segment coordinates with depth mapped vertically. The duplicated radial seam carries zero at the first boundary and one at the final boundary without modifying geometry or index topology.
+Material descriptor set one retains image binding zero and sampler binding one. Binding two is a fragment-stage uniform buffer containing calibrated surface response, roughness-dependent specular response, rim response and neutral specular tint.
 
-The Vulkan vertex layout exposes the coordinate as `R32G32_SFLOAT` at location three. HLSL consumes the declared attribute directly and no longer derives material coordinates from object position.
+The parameter buffer uses host-visible memory with coherent preference and explicit non-coherent flushing. It is initialized once and survives swapchain recreation with the material texture.
 
-The preserved rendering contract contains 96 vertices, 144 indices, 96 flat normals, 96 texture coordinates, a device-local procedural material texture, per-swapchain-image depth targets, directional lighting and two frame-local scene-uniform descriptor sets.
+HLSL consumes the same four-register contract. Frame-local transforms, lighting vectors, view direction and exposure remain isolated in scene descriptor set zero.
 
-Linux validation contains 21 passing tests.
+The preserved rendering contract contains 96 vertices, 144 indices, 96 normals, 96 explicit texture coordinates, the versioned 64 by 64 procedural texture with checksum `ad3a091625158275`, per-swapchain-image depth targets and two frame-local scene-uniform descriptor sets.
+
+Linux validation contains 22 passing tests.

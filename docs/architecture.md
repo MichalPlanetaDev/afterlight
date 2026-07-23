@@ -39,3 +39,9 @@ The scene descriptor set remains set zero and contains frame-local uniform data.
 `scene::Vertex` owns the texture coordinate used by the material shader. Planar aperture faces map object-space positions into the normalized texture domain. Radial walls map segment boundaries across the horizontal interval and depth across the vertical interval.
 
 The generator retains one at the final radial boundary rather than applying modulo arithmetic. Existing duplicated seam vertices therefore represent the same position with zero and one coordinates without introducing an interpolation discontinuity through unrelated texture regions.
+
+## Persistent material parameter lifetime
+
+Material descriptor set one owns resources that survive swapchain recreation. Binding zero remains the sampled aperture image, binding one remains its sampler, and binding two contains the immutable 64-byte aperture material parameter block.
+
+The material block is deliberately separate from scene descriptor set zero. Scene transforms, lighting vectors, exposure and frame cadence remain frame-local, while surface response follows material lifetime.
