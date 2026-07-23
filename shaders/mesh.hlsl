@@ -27,6 +27,9 @@ struct VertexInput
 
     [[vk::location(2)]]
     float3 color : COLOR0;
+
+    [[vk::location(3)]]
+    float2 texture_coordinate : TEXCOORD0;
 };
 
 struct VertexOutput
@@ -60,9 +63,7 @@ VertexOutput vs_main(VertexInput input)
     output.color = input.color;
 
     output.material_uv =
-        input.position.xy *
-            0.28 +
-        0.5;
+        input.texture_coordinate;
 
     return output;
 }

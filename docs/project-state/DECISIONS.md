@@ -1,13 +1,11 @@
 # Decisions
 
-P12 uses a dedicated persistent `MaterialTexture` resource.
+P13 makes texture coordinates part of the scene vertex contract.
 
-The object owns one device-local optimal-tiled image, its memory, image view, sampler and descriptor resources. It survives swapchain recreation and remains immutable after its upload fence completes.
+Planar front and rear faces map their existing object-space aperture positions into zero-to-one coordinates. Inner and outer walls map segment boundaries across the horizontal texture interval and front-to-back depth across the vertical interval.
 
-Frame-local scene data stays in descriptor set zero. Persistent material state uses descriptor set one, with the sampled image at binding zero and sampler at binding one.
+The final radial boundary remains one instead of wrapping to zero. Duplicated seam vertices therefore express both texture edges while retaining identical geometric positions.
 
-The first surface is generated with integer mathematics from versioned dimensions and ring parameters. It does not rely on imported assets or decorative random noise.
+The Vulkan vertex input uses location three with `R32G32_SFLOAT`. The shader consumes this attribute directly.
 
-RGB is stored as sRGB colour data. Alpha stores bounded roughness. Linear filtering, clamp-to-edge addressing, one mip level and disabled anisotropy are explicit current policies.
-
-P12 does not introduce an asset compiler, imported texture formats, compression, automatic mip generation, material instances or general-purpose texture management.
+P13 does not alter aperture topology, material texture generation, descriptor ownership, GPU upload policy, depth ownership or lighting.

@@ -11,7 +11,7 @@ namespace afterlight::scene
 namespace
 {
 
-constexpr std::size_t aperture_segment_count = 6;
+constexpr std::size_t aperture_segment_count = 6U;
 constexpr float front_depth = 0.18F;
 constexpr float back_depth = -0.18F;
 
@@ -19,13 +19,16 @@ using Position = std::array<float, 3>;
 using Direction = std::array<float, 3>;
 using Color = std::array<float, 3>;
 using PlanarPoint = std::array<float, 2>;
+using TextureCoordinate = std::array<float, 2>;
 using QuadPositions = std::array<Position, 4>;
+using QuadTextureCoordinates = std::array<TextureCoordinate, 4>;
 
 struct QuadSurface final
 {
     QuadPositions positions{};
     Direction normal{};
     Color color{};
+    QuadTextureCoordinates texture_coordinates{};
 };
 
 struct RadialNormalParameters final
@@ -77,10 +80,23 @@ constexpr std::array<Color, aperture_segment_count> segment_colors{{
     };
 }
 
+[[nodiscard]] constexpr TextureCoordinate
+planar_texture_coordinate(const PlanarPoint& point) noexcept
+{
+    return {
+        point[0] * 0.5F + 0.5F,
+        point[1] * 0.5F + 0.5F,
+    };
+}
+
+[[nodiscard]] float segment_texture_coordinate(std::size_t boundary) noexcept
+{
+    return static_cast<float>(boundary) / static_cast<float>(aperture_segment_count);
+}
+
 [[nodiscard]] Direction radial_normal(const RadialNormalParameters& parameters)
 {
     float horizontal = parameters.first[0] + parameters.second[0];
-
     float vertical = parameters.first[1] + parameters.second[1];
 
     const float length = std::sqrt(horizontal * horizontal + vertical * vertical);
@@ -97,7 +113,6 @@ constexpr std::array<Color, aperture_segment_count> segment_colors{{
     const float orientation = parameters.inward ? -1.0F : 1.0F;
 
     horizontal = horizontal / length * orientation;
-
     vertical = vertical / length * orientation;
 
     return {
@@ -120,12 +135,13 @@ void append_quad(MeshData& mesh, const QuadSurface& surface)
 {
     const auto base = static_cast<std::uint16_t>(mesh.vertices.size());
 
-    for (const Position& position : surface.positions)
+    for (std::size_t corner = 0U; corner < surface.positions.size(); ++corner)
     {
         mesh.vertices.push_back({
-            .position = position,
+            .position = surface.positions[corner],
             .normal = surface.normal,
             .color = surface.color,
+            .texture_coordinate = surface.texture_coordinates[corner],
         });
     }
 
@@ -152,11 +168,10 @@ MeshData make_observatory_aperture()
 {
     MeshData mesh;
 
-    mesh.vertices.reserve(aperture_segment_count * 16);
+    mesh.vertices.reserve(aperture_segment_count * 16U);
+    mesh.indices.reserve(aperture_segment_count * 24U);
 
-    mesh.indices.reserve(aperture_segment_count * 24);
-
-    for (std::size_t segment = 0; segment < aperture_segment_count; ++segment)
+    for (std::size_t segment = 0U; segment < aperture_segment_count; ++segment)
     {
         const std::size_t next = (segment + 1U) % aperture_segment_count;
 
@@ -188,6 +203,10 @@ MeshData make_observatory_aperture()
                                                      .offset = 0.018F,
                                                  });
 
+        const float first_boundary = segment_texture_coordinate(segment);
+
+        const float second_boundary = segment_texture_coordinate(segment + 1U);
+
         append_quad(mesh,
                     {
                         .positions =
@@ -204,6 +223,13 @@ MeshData make_observatory_aperture()
                                 1.0F,
                             },
                         .color = color,
+                        .texture_coordinates =
+                            QuadTextureCoordinates{
+                                planar_texture_coordinate(outer),
+                                planar_texture_coordinate(next_outer),
+                                planar_texture_coordinate(next_inner),
+                                planar_texture_coordinate(inner),
+                            },
                     });
 
         append_quad(mesh,
@@ -222,6 +248,13 @@ MeshData make_observatory_aperture()
                                 -1.0F,
                             },
                         .color = rear_color,
+                        .texture_coordinates =
+                            QuadTextureCoordinates{
+                                planar_texture_coordinate(outer),
+                                planar_texture_coordinate(inner),
+                                planar_texture_coordinate(next_inner),
+                                planar_texture_coordinate(next_outer),
+                            },
                     });
 
         append_quad(mesh,
@@ -239,6 +272,25 @@ MeshData make_observatory_aperture()
                             .inward = false,
                         }),
                         .color = outer_color,
+                        .texture_coordinates =
+                            QuadTextureCoordinates{
+                                TextureCoordinate{
+                                    first_boundary,
+                                    0.0F,
+                                },
+                                TextureCoordinate{
+                                    first_boundary,
+                                    1.0F,
+                                },
+                                TextureCoordinate{
+                                    second_boundary,
+                                    1.0F,
+                                },
+                                TextureCoordinate{
+                                    second_boundary,
+                                    0.0F,
+                                },
+                            },
                     });
 
         append_quad(mesh,
@@ -256,6 +308,25 @@ MeshData make_observatory_aperture()
                             .inward = true,
                         }),
                         .color = inner_color,
+                        .texture_coordinates =
+                            QuadTextureCoordinates{
+                                TextureCoordinate{
+                                    first_boundary,
+                                    0.0F,
+                                },
+                                TextureCoordinate{
+                                    second_boundary,
+                                    0.0F,
+                                },
+                                TextureCoordinate{
+                                    second_boundary,
+                                    1.0F,
+                                },
+                                TextureCoordinate{
+                                    first_boundary,
+                                    1.0F,
+                                },
+                            },
                     });
     }
 

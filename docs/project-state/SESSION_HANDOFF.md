@@ -6,20 +6,18 @@ Repository: `MichalPlanetaDev/afterlight`
 
 Local path: `~/projects/afterlight`
 
-Completed phase: P12 — Procedural Material Texture
+Completed phase: P13 — Explicit Texture Coordinates
 
-Version: `0.12.0-dev`
+Version: `0.13.0-dev`
 
-Linux tests: 20/20
+Linux tests: 21/21
 
-Current renderer: Vulkan dynamic rendering with one depth target per swapchain image, device-local aperture mesh buffers, deterministic sampled material texture, explicit flat normals, directional lighting and descriptor-backed frame-local uniforms.
+Current renderer: Vulkan dynamic rendering with explicit planar and radial texture coordinates, one depth target per swapchain image, device-local aperture mesh buffers, a deterministic sampled material texture, flat normals, directional lighting and frame-local scene uniforms.
 
-Material texture: 64 by 64 `R8G8B8A8_SRGB`
+Geometry contract: 96 vertices, 144 indices, 96 normals and 96 texture coordinates
 
-Material checksum: `ad3a091625158275`
+Mapping contract: planar front and rear faces; circumferential inner and outer walls; duplicated zero-to-one radial seam
 
-Descriptor contract: scene set 0; material set 1, image binding 0, sampler binding 1
+P14 has not started.
 
-P13 has not started.
-
-Completion marker: `P12_STATUS=PROCEDURAL_MATERIAL_TEXTURE_VALIDATED`
+Completion marker: `P13_STATUS=EXPLICIT_TEXTURE_COORDINATES_VALIDATED`

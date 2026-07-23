@@ -27,3 +27,7 @@ Every swapchain image owns a matching device-local depth target. The acquired im
 The aperture now samples a project-owned calibration surface generated deterministically with integer mathematics. Its sRGB colour channels describe restrained steel, alloy and optical accents while alpha carries bounded roughness. The immutable image resides in device-local memory and is uploaded through a fenced staging transfer before rendering begins.
 
 Scene uniforms remain frame-local in descriptor set zero. Persistent material image and sampler state occupy descriptor set one, keeping ownership and update frequency explicit.
+
+## Explicit aperture texture coordinates
+
+The aperture generator now authors texture coordinates with the geometry instead of reconstructing them in HLSL. Front and rear faces use deterministic planar projection, while inner and outer walls use a circumferential mapping with an explicit duplicated seam. The Vulkan vertex layout and shader interface consume the same two-component attribute contract.

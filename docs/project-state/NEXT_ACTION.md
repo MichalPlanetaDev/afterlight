@@ -1,7 +1,7 @@
 # Next Action
 
-P13 has not started.
+P14 has not started.
 
-Before defining P13, inspect the verified P12 repository and rendering dependencies. A focused material-parameter block or explicit texture-coordinate support is a reasonable candidate, but the next milestone must be selected from actual repository evidence.
+Before defining P14, inspect the verified P13 repository and rendering dependencies. A persistent material-parameter block is the next evidence-supported candidate because texture ownership, descriptor lifetime and geometric sampling coordinates are now explicit.
 
-Mip generation, imported assets, compression, material-schema reflection and the offline asset compiler remain outside P12.
+P14 must still be selected from repository evidence before implementation. Tangent space, normal mapping, imported assets, mip generation and a general material framework remain outside P13.

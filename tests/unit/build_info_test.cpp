@@ -38,10 +38,10 @@ int main()
 
     test.expect(info.product_name == "Afterlight", "product name is stable");
 
-    test.expect(info.semantic_version == "0.12.0-dev",
-                "procedural material-texture version is explicit");
+    test.expect(info.semantic_version == "0.13.0-dev",
+                "explicit texture-coordinate version is explicit");
 
-    test.expect(info.milestone == "Procedural Material Texture", "current milestone is reported");
+    test.expect(info.milestone == "Explicit Texture Coordinates", "current milestone is reported");
 
     test.expect(info.revision == "local", "unreleased revision is not fabricated");
 
