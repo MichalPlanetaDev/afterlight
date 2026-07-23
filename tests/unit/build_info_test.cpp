@@ -38,9 +38,10 @@ int main()
 
     test.expect(info.product_name == "Afterlight", "product name is stable");
 
-    test.expect(info.semantic_version == "0.10.0-dev", "descriptor-uniform version is explicit");
+    test.expect(info.semantic_version == "0.11.0-dev",
+                "per-image depth-target version is explicit");
 
-    test.expect(info.milestone == "Descriptor-Backed Scene Uniforms",
+    test.expect(info.milestone == "Per-Swapchain-Image Depth Targets",
                 "current milestone is reported");
 
     test.expect(info.revision == "local", "unreleased revision is not fabricated");

@@ -6,14 +6,14 @@ Repository: `MichalPlanetaDev/afterlight`
 
 Local path: `~/projects/afterlight`
 
-Completed phase: P10 — Device-Local Mesh Uploads
+Completed phase: P11 — Per-Swapchain-Image Depth Targets
 
-Version: `0.10.0-dev`
+Version: `0.11.0-dev`
 
-Linux tests: 18/18
+Linux tests: 19/19
 
-Current renderer: Vulkan dynamic rendering with depth testing, explicit flat normals, directional lighting, descriptor-backed frame-local uniforms and device-local aperture vertex and index buffers.
+Current renderer: Vulkan dynamic rendering with one depth target per swapchain image, device-local aperture mesh buffers, explicit flat normals, directional lighting and descriptor-backed frame-local uniforms.
 
-P11 has not started.
+P12 has not started.
 
-Completion marker: `P10_STATUS=DEVICE_LOCAL_MESH_UPLOADS_VALIDATED`
+Completion marker: `P11_STATUS=PER_IMAGE_DEPTH_TARGETS_VALIDATED`

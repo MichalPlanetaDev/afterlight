@@ -112,6 +112,10 @@ void print_frame_smoke(const afterlight::core::BuildInfo& build,
 
     std::cout << " | depth=" << static_cast<std::uint32_t>(swapchain.depth_format);
 
+    std::cout << " | depth-targets=" << swapchain.depth_target_count;
+
+    std::cout << " | depth-ownership=per-swapchain-image";
+
     std::cout << " | geometry=extruded-observatory-aperture";
 
     std::cout << " | vertices=" << geometry.vertex_count;

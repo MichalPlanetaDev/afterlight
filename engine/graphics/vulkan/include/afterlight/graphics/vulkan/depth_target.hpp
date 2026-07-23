@@ -1,6 +1,8 @@
 #pragma once
 
 #include <afterlight/graphics/vulkan/vulkan_context.hpp>
+#include <cstddef>
+#include <cstdint>
 #include <span>
 #include <volk.h>
 
@@ -8,6 +10,8 @@ namespace afterlight::graphics::vulkan
 {
 
 [[nodiscard]] VkFormat choose_depth_format(std::span<const VkFormat> supported_formats);
+
+[[nodiscard]] std::uint32_t depth_target_count_for_swapchain(std::size_t swapchain_image_count);
 
 class DepthTarget final
 {

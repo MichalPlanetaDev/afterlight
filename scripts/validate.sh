@@ -74,8 +74,8 @@ print(len(json.load(sys.stdin).get("tests", [])))
 '
     )"
 
-    [[ "$count" == "18" ]] || {
-        echo "Expected 18 tests, found $count"
+    [[ "$count" == "19" ]] || {
+        echo "Expected 19 tests, found $count"
         return 1
     }
 }
@@ -90,7 +90,7 @@ platform_smoke()
             --smoke
     )"
 
-    expected="Afterlight 0.10.0-dev | platform=dummy | window=1280x720"
+    expected="Afterlight 0.11.0-dev | platform=dummy | window=1280x720"
 
     [[ "$output" == "$expected" ]] || {
         echo "Expected: $expected"
@@ -122,14 +122,16 @@ output = os.environ[
 ].strip()
 
 pattern = re.compile(
-    r"Afterlight 0[.]10[.]0-dev"
+    r"Afterlight 0[.]11[.]0-dev"
     r" [|] backend=vulkan"
     r" [|] device=.+"
     r" [|] presented=3"
     r" [|] extent=[0-9]+x[0-9]+"
-    r" [|] images=[0-9]+"
+    r" [|] images=(?P<images>[0-9]+)"
     r" [|] format=[0-9]+"
     r" [|] depth=[0-9]+"
+    r" [|] depth-targets=(?P<depth_targets>[0-9]+)"
+    r" [|] depth-ownership=per-swapchain-image"
     r" [|] geometry=extruded-observatory-aperture"
     r" [|] vertices=96"
     r" [|] indices=144"
@@ -141,8 +143,15 @@ pattern = re.compile(
     r" [|] validation=on"
 )
 
-if pattern.fullmatch(output) is None:
+match = pattern.fullmatch(output)
+
+if match is None:
     print("Unexpected Vulkan smoke output:")
+    print(repr(output))
+    sys.exit(1)
+
+if match.group("images") != match.group("depth_targets"):
+    print("Depth-target ownership does not match swapchain images:")
     print(repr(output))
     sys.exit(1)
 PYTHON

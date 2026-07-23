@@ -1,6 +1,7 @@
 #include <afterlight/graphics/vulkan/depth_target.hpp>
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <span>
@@ -50,6 +51,21 @@ VkFormat choose_depth_format(std::span<const VkFormat> supported_formats)
     }
 
     throw std::invalid_argument{"no supported depth format was provided"};
+}
+
+std::uint32_t depth_target_count_for_swapchain(std::size_t swapchain_image_count)
+{
+    if (swapchain_image_count == 0U)
+    {
+        throw std::invalid_argument{"swapchain must contain at least one depth target"};
+    }
+
+    if (swapchain_image_count > static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()))
+    {
+        throw std::length_error{"swapchain depth-target count exceeds uint32 range"};
+    }
+
+    return static_cast<std::uint32_t>(swapchain_image_count);
 }
 
 DepthTarget::DepthTarget(VulkanContext& context, VkExtent2D extent) : context_{context}

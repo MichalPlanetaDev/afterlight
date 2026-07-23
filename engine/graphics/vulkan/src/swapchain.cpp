@@ -586,9 +586,27 @@ bool SwapchainRenderer::create_swapchain(const platform::Window& window)
     create_image_resources();
     create_render_finished_semaphores();
 
-    depth_target_ = std::make_unique<DepthTarget>(context_, extent);
+    const std::uint32_t depth_target_count = depth_target_count_for_swapchain(images_.size());
 
-    info_.depth_format = depth_target_->format();
+    depth_targets_.reserve(static_cast<std::size_t>(depth_target_count));
+
+    while (depth_targets_.size() < static_cast<std::size_t>(depth_target_count))
+    {
+        depth_targets_.push_back(std::make_unique<DepthTarget>(context_, extent));
+    }
+
+    const VkFormat depth_format = depth_targets_.front()->format();
+
+    for (const auto& depth_target : depth_targets_)
+    {
+        if (depth_target == nullptr || depth_target->format() != depth_format)
+        {
+            throw std::runtime_error{"swapchain depth targets do not share one format"};
+        }
+    }
+
+    info_.depth_format = depth_format;
+    info_.depth_target_count = depth_target_count;
 
     if (scene_uniforms_ == nullptr)
     {
@@ -690,7 +708,7 @@ void SwapchainRenderer::create_render_finished_semaphores()
 void SwapchainRenderer::destroy_swapchain() noexcept
 {
     mesh_pipeline_.reset();
-    depth_target_.reset();
+    depth_targets_.clear();
 
     for (const VkSemaphore semaphore : render_finished_)
     {
@@ -804,12 +822,14 @@ void SwapchainRenderer::record_commands(RecordFrameParameters parameters)
     }
 
     if (resource_index >= images_.size() || resource_index >= image_views_.size() ||
-        resource_index >= image_resources_.size())
+        resource_index >= image_resources_.size() || resource_index >= depth_targets_.size())
     {
         throw std::runtime_error{"swapchain recording index is invalid"};
     }
 
-    if (mesh_pipeline_ == nullptr || gpu_mesh_ == nullptr || depth_target_ == nullptr ||
+    DepthTarget* const depth_target = depth_targets_[resource_index].get();
+
+    if (mesh_pipeline_ == nullptr || gpu_mesh_ == nullptr || depth_target == nullptr ||
         scene_uniforms_ == nullptr)
     {
         throw std::runtime_error{"descriptor-backed rendering resources are unavailable"};
@@ -841,7 +861,7 @@ void SwapchainRenderer::record_commands(RecordFrameParameters parameters)
 
     apply_image_barrier(command_buffer, render_barrier);
 
-    depth_target_->prepare(command_buffer);
+    depth_target->prepare(command_buffer);
 
     VkRenderingAttachmentInfo color_attachment{};
 
@@ -867,7 +887,7 @@ void SwapchainRenderer::record_commands(RecordFrameParameters parameters)
 
     depth_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 
-    depth_attachment.imageView = depth_target_->image_view();
+    depth_attachment.imageView = depth_target->image_view();
 
     depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
 

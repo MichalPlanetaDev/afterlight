@@ -30,6 +30,7 @@ struct SwapchainInfo final
     std::uint32_t image_count{};
     VkFormat format{VK_FORMAT_UNDEFINED};
     VkFormat depth_format{VK_FORMAT_UNDEFINED};
+    std::uint32_t depth_target_count{};
     VkPresentModeKHR present_mode{VK_PRESENT_MODE_FIFO_KHR};
 };
 
@@ -137,7 +138,7 @@ private:
     std::vector<rhi::TextureHandle> image_resources_;
 
     std::unique_ptr<SceneUniforms> scene_uniforms_;
-    std::unique_ptr<DepthTarget> depth_target_;
+    std::vector<std::unique_ptr<DepthTarget>> depth_targets_;
     std::unique_ptr<GpuMesh> gpu_mesh_;
     std::unique_ptr<MeshPipeline> mesh_pipeline_;
 

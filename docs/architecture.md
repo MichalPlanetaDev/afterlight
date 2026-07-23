@@ -23,3 +23,7 @@ The graphics pipeline consumes the uniform descriptor layout instead of declarin
 ## Device-local static geometry
 
 Static aperture geometry crosses an explicit staging boundary. CPU-authored data enters host-visible transfer-source buffers and is copied into device-local vertex and index destinations. Synchronization2 barriers establish vertex-input visibility, while fence completion protects staging and command-pool destruction. Frame-local descriptor-backed scene uniforms remain a separate lifetime domain.
+
+## Per-swapchain-image depth targets
+
+The swapchain owns one depth target per presentation image. Command recording selects the depth attachment with the acquired image index, so the image-specific fence protects color and depth reuse as one ownership unit. Resize recreation destroys and rebuilds the complete attachment set.

@@ -17,3 +17,7 @@ Build and validate:
 ## Device-local mesh uploads
 
 The Vulkan backend stores deterministic aperture vertices and indices in device-local buffers. Host-visible staging allocations provide the CPU transfer path, coherent memory is preferred and non-coherent staging memory uses an explicit mapped-memory flush. A fenced one-time submission protects staging lifetime and makes transfer writes visible to vertex and index reads.
+
+## Per-image depth ownership
+
+Every swapchain image owns a matching device-local depth target. The acquired image index selects both attachments, and the existing image fence protects their reuse. This removes writable depth sharing between independently in-flight frames.
